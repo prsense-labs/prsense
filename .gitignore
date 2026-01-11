@@ -1,0 +1,42 @@
+# TypeScript build output
+dist/
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/
+pr.json
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

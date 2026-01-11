@@ -1,0 +1,49 @@
+name: 'PRSense - Duplicate PR Detection'
+description: 'Automatically detect duplicate pull requests using AI-powered similarity analysis'
+author: 'PRSense Contributors'
+
+branding:
+  icon: 'search'
+  color: 'blue'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  openai-api-key:
+    description: 'OpenAI API key for embeddings (not required if using onnx)'
+    required: false
+  embedding-provider:
+    description: 'Embedding provider: openai or onnx'
+    required: false
+    default: 'openai'
+  duplicate-threshold:
+    description: 'Threshold for marking as duplicate (0.0-1.0)'
+    required: false
+    default: '0.90'
+  possible-threshold:
+    description: 'Threshold for marking as possible duplicate (0.0-1.0)'
+    required: false
+    default: '0.82'
+  post-comment:
+    description: 'Whether to post a comment on the PR'
+    required: false
+    default: 'true'
+  storage-path:
+    description: 'Path to the JSON file for storing PR index'
+    required: false
+    default: 'prsense-index.json'
+
+outputs:
+  duplicates-found:
+    description: 'Whether any duplicates were found (true/false)'
+  duplicate-count:
+    description: 'Number of duplicate PRs found'
+  result:
+    description: 'Detection result (DUPLICATE, POSSIBLE, or NONE)'
+  similar-pr:
+    description: 'PR number of the most similar PR (if any)'
+
+runs:
+  using: 'node20'
+  main: 'dist/action/index.js'

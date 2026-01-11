@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/webhook.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/webhook",
+      "dest": "/api/webhook.ts"
+    }
+  ],
+  "env": {
+    "OPENAI_API_KEY": "@openai-api-key",
+    "DATABASE_URL": "@database-url",
+    "GITHUB_TOKEN": "@github-token",
+    "GITHUB_WEBHOOK_SECRET": "@github-webhook-secret"
+  }
+}

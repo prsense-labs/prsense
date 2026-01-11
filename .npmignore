@@ -1,0 +1,45 @@
+# Source and Build Configs
+src/
+tsconfig.json
+vitest.config.ts
+.gitignore
+Dockerfile
+docker-compose.yml
+
+# GitHub and CI/CD
+.github/
+action/
+
+# Dependencies
+node_modules/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tests and Coverage
+coverage/
+__tests__/
+test/
+
+# Secrets and Env
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Documentation 
+docs/
+examples/
+
+
+
+# Source bin files (compiled versions are in dist/bin)
+bin/
+
+

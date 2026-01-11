@@ -1,0 +1,11 @@
+{
+  "prId": 101,
+  "title": "Fix authentication bug",
+  "description": "This PR fixes a critical bug in the authentication system where empty passwords were being accepted. The fix adds proper validation to reject empty password fields.",
+  "files": [
+    "auth/login.ts",
+    "auth/validation.ts",
+    "tests/auth.test.ts"
+  ],
+  "diff": "--- a/auth/login.ts\n+++ b/auth/login.ts\n@@ -10,6 +10,9 @@\n function validatePassword(password) {\n+  if (!password || password.length === 0) {\n+    throw new Error('Password cannot be empty');\n+  }\n   return password.length >= 8;\n }"
+}
