@@ -218,7 +218,7 @@ We do not:
 
 ## Contributing
 
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) (if available) or simply open a PR.
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) or simply open a PR.
 
 ---
 
