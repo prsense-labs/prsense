@@ -66,7 +66,8 @@
   "dependencies": {
     "@actions/core": "^1.10.1",
     "@actions/github": "^6.0.0",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -80,8 +81,8 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^11.0.0",
-    "pg": "^8.11.0",
-    "onnxruntime-node": "^1.16.0"
+    "onnxruntime-node": "^1.16.0",
+    "pg": "^8.11.0"
   },
   "peerDependencies": {
     "better-sqlite3": "^11.0.0",
