@@ -14,6 +14,7 @@ Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 
 [![Tests](https://img.shields.io/badge/tests-127%20passed-brightgreen)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Deploy to Vercel](https://img.shields.io/badge/deploy-vercel-black?logo=vercel&logoColor=white)](docs/deployment.md)
 
 ---
 
