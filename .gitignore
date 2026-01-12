@@ -1,22 +1,16 @@
-# TypeScript build output
+# Build Output
 dist/
-*.js
-*.js.map
-*.d.ts
-*.d.ts.map
+*.tsbuildinfo
 
 # Dependencies
 node_modules/
-package-lock.json
 
-# IDE
+# IDE & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 
@@ -26,17 +20,24 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment
+# Environment Variables (Creating a safety net)
 .env
 .env.local
 .env.*.local
+*.env
 
 # Testing
 coverage/
 .nyc_output/
-pr.json
 
-# Temporary files
+# Application Data
+pr.json
+*.db
+*.sqlite
+*.sqlite-journal
+test-results/
+
+# Temporary
 *.tmp
 *.temp
 .cache/

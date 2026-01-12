@@ -8,9 +8,12 @@
 
 Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 minutes.**
 
-[![Production Ready](https://img.shields.io/badge/production-ready-brightgreen)]() 
-[![Deploy to Vercel](https://img.shields.io/badge/deploy-vercel-black)]()
-[![Accuracy](https://img.shields.io/badge/accuracy-95%25-blue)]()
+[![npm version](https://img.shields.io/npm/v/prsense?color=blue)](https://www.npmjs.com/package/prsense)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Tests](https://img.shields.io/badge/tests-127%20passed-brightgreen)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
@@ -113,6 +116,9 @@ cd prsense
 npm install     # Installs dependencies
 npm run build   # Builds all packages
 ```
+
+> [!TIP]
+> **Zero setup mode**: After building, the CLI works immediately using local ONNX embeddings. No API key required.
 
 ### 6 Ways to Use
 
@@ -218,7 +224,11 @@ We do not:
 
 ## Contributing
 
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) or simply open a PR.
+Contributions welcome! Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** before submitting a PR.
+
+- 💬 **Questions?** Start a [Discussion](https://github.com/prsense-labs/prsense/discussions)
+- 🐛 **Found a bug?** Open an [Issue](https://github.com/prsense-labs/prsense/issues)
+- 📋 **What's new?** See the [CHANGELOG](CHANGELOG.md)
 
 ---
 

@@ -37,6 +37,22 @@ You save 30 minutes! ✨
 
 ---
 
+## ⚡ Try It Now (Zero Config)
+
+```bash
+# Clone, install, and run in 60 seconds
+git clone https://github.com/prsense-labs/prsense
+cd prsense && npm install && npm run build
+
+# Check for duplicates immediately — no API key needed!
+npx prsense check --title "Fix login bug" --files "auth.ts"
+```
+
+> [!TIP]
+> **No setup required.** PRSense auto-detects that no API key is present and uses local ONNX AI embeddings.
+
+---
+
 ## How Do I Use It?
 
 Choose the method that fits your workflow:

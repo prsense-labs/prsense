@@ -1,0 +1,37 @@
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for PRSense? We'd love to hear it!
+        For bug reports, please use the Issues tab instead.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your Idea
+      description: Describe your idea or suggestion
+      placeholder: It would be great if PRSense could...
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Use Case
+      description: How would this help you or others?
+      placeholder: This would help maintainers who...
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - CLI
+        - GitHub Action
+        - Library/API
+        - Documentation
+        - New Feature
+        - Performance
+        - Other
+    validations:
+      required: true

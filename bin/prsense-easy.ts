@@ -8,6 +8,7 @@
 
 import { PRSenseDetector } from '../src/prsense.js'
 import { createOpenAIEmbedder } from '../src/embedders/openai.js'
+import { createONNXEmbedder } from '../src/embedders/onnx.js'
 import type { Embedder } from '../src/embeddingPipeline.js'
 import { execSync } from 'child_process'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
@@ -25,6 +26,18 @@ const colors = {
     bold: '\x1b[1m'
 }
 
+/**
+ * Get the appropriate embedder based on available configuration.
+ * Falls back to ONNX (local) if no OpenAI API key is found.
+ */
+function getEmbedder(): Embedder {
+    if (process.env.OPENAI_API_KEY) {
+        return createOpenAIEmbedder()
+    }
+    console.log(`${colors.blue}📦 Using ONNX local embeddings (no API key found)${colors.reset}`)
+    return createONNXEmbedder()
+}
+
 const log = {
     success: (msg: string) => console.log(`${colors.green}✅ ${msg}${colors.reset}`),
     error: (msg: string) => console.log(`${colors.red}❌ ${msg}${colors.reset}`),
@@ -36,15 +49,51 @@ const log = {
 // Get git info automatically
 function getGitInfo() {
     try {
-        const branch = execSync('git branch --show-current', { encoding: 'utf-8' }).trim()
-        const title = execSync('git log -1 --pretty=%s', { encoding: 'utf-8' }).trim()
-        const description = execSync('git log -1 --pretty=%b', { encoding: 'utf-8' }).trim()
-        const files = execSync('git diff --name-only origin/main 2>/dev/null || git diff --name-only HEAD~1', { encoding: 'utf-8' })
+        const branch = execSync('git branch --show-current', { encoding: 'utf-8', stdio: 'pipe' }).trim()
+
+        let title = ''
+        try {
+            title = execSync('git log -1 --pretty=%s', { encoding: 'utf-8', stdio: 'pipe' }).trim()
+        } catch (e) {
+            title = 'Work in Progress'
+        }
+
+        let description = ''
+        try {
+            description = execSync('git log -1 --pretty=%b', { encoding: 'utf-8', stdio: 'pipe' }).trim()
+        } catch (e) { description = '' }
+
+        // Try getting changed files from multiple sources
+        let filesStr = ''
+        try {
+            // Priority 1: Diff against origin/main (common for PRs)
+            filesStr = execSync('git diff --name-only origin/main', { encoding: 'utf-8', stdio: 'pipe' })
+        } catch (e) {
+            try {
+                // Priority 2: Diff against previous commit (for local work)
+                filesStr = execSync('git diff --name-only HEAD~1', { encoding: 'utf-8', stdio: 'pipe' })
+            } catch (e) {
+                try {
+                    // Priority 3: Staged files (for brand new commits)
+                    filesStr = execSync('git diff --name-only --cached', { encoding: 'utf-8', stdio: 'pipe' })
+                } catch (e) {
+                    try {
+                        // Priority 4: All tracked files (fallback for initial commit)
+                        filesStr = execSync('git ls-files', { encoding: 'utf-8', stdio: 'pipe' })
+                    } catch (e) {
+                        filesStr = ''
+                    }
+                }
+            }
+        }
+
+        const files = filesStr
             .trim()
             .split('\n')
+            .map(f => f.trim())
             .filter(f => f.length > 0)
-        
-        return { branch, title, description, files, hasChanges: files.length > 0 }
+
+        return { branch: branch || 'unknown', title, description, files, hasChanges: files.length > 0 }
     } catch (error) {
         return null
     }
@@ -77,18 +126,18 @@ async function setupWizard() {
         log.warning('No OpenAI API key found')
         console.log('\n📝 Get your key from: https://platform.openai.com/api-keys\n')
         const apiKey = await prompt('Enter your OpenAI API key (or press Enter to skip): ')
-        
+
         if (apiKey.trim()) {
             const envPath = join(process.cwd(), '.env')
             const envContent = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : ''
-            
+
             if (envContent.includes('OPENAI_API_KEY')) {
                 const newContent = envContent.replace(/OPENAI_API_KEY=.*/, `OPENAI_API_KEY=${apiKey}`)
                 writeFileSync(envPath, newContent)
             } else {
                 writeFileSync(envPath, envContent + `\nOPENAI_API_KEY=${apiKey}\n`)
             }
-            
+
             process.env.OPENAI_API_KEY = apiKey
             log.success('API key saved to .env')
         } else {
@@ -123,7 +172,7 @@ async function autoCheck() {
 
     // Get git info
     const gitInfo = getGitInfo()
-    
+
     if (!gitInfo) {
         log.error('Not in a git repository')
         console.log('\n💡 Make sure you\'re in a git repo with commits\n')
@@ -141,20 +190,13 @@ async function autoCheck() {
     console.log(`📄 Title: ${gitInfo.title}`)
     console.log(`📂 Files: ${gitInfo.files.length} changed\n`)
 
-    // Check for API key
-    if (!process.env.OPENAI_API_KEY) {
-        log.error('OpenAI API key not found')
-        console.log('\n💡 Run: prsense setup\n')
-        process.exit(1)
-    }
-
-    // Create detector
-    const embedder = createOpenAIEmbedder()
+    // Create detector with auto-detected embedder
+    const embedder = getEmbedder()
     const detector = new PRSenseDetector({ embedder })
 
     // Check for duplicates
     console.log('🔄 Analyzing...\n')
-    
+
     const result = await detector.check({
         prId: Date.now(),
         title: gitInfo.title,
@@ -190,12 +232,12 @@ async function quickCheck() {
     const title = await prompt('PR Title: ')
     const description = await prompt('Description (optional): ')
     const filesInput = await prompt('Files (comma-separated, optional): ')
-    
+
     const files = filesInput ? filesInput.split(',').map(f => f.trim()) : []
 
     console.log('\n🔄 Checking...\n')
 
-    const embedder = createOpenAIEmbedder()
+    const embedder = getEmbedder()
     const detector = new PRSenseDetector({ embedder })
 
     const result = await detector.check({
@@ -220,7 +262,7 @@ async function quickCheck() {
 
 // Show stats
 async function showStats() {
-    const embedder = createOpenAIEmbedder()
+    const embedder = getEmbedder()
     const detector = new PRSenseDetector({ embedder })
     const stats = detector.getStats()
 
@@ -251,10 +293,13 @@ ${colors.bold}EXAMPLES:${colors.reset}
   prsense quick        # Interactive mode
   prsense setup        # Run setup wizard
 
-${colors.bold}FIRST TIME?${colors.reset}
-  1. Run: prsense setup
-  2. Enter your OpenAI API key
-  3. Run: prsense check
+${colors.bold}GET STARTED:${colors.reset}
+  Just run: prsense check
+  (Works immediately! Uses local ONNX if no API key found)
+
+${colors.bold}WANT HIGHER ACCURACY?${colors.reset}
+  1. Get an OpenAI API key
+  2. Run: prsense setup
 
 ${colors.bold}DOCS:${colors.reset}
   Full guide: CLI_USAGE.md

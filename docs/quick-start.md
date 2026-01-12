@@ -27,6 +27,9 @@ npx prsense check --title "Test PR" --files "test.ts" --dry-run
 ✅ UNIQUE (Confidence: 0.000)
 ```
 
+> [!TIP]
+> **No API key?** PRSense auto-detects ONNX and runs 100% locally. No setup needed!
+
 ---
 
 ## 🎯 Basic Usage

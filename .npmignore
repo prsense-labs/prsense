@@ -1,45 +1,39 @@
-# Source and Build Configs
+# Source Code (shipped in dist/)
 src/
+bin/
 tsconfig.json
 vitest.config.ts
-.gitignore
-Dockerfile
-docker-compose.yml
 
-# GitHub and CI/CD
+# GitHub & CI
 .github/
 action/
+.gitignore
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+START_HERE.md
 
-# Dependencies
-node_modules/
-
-# IDE and Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Tests and Coverage
+# Tests & Docs
 coverage/
 __tests__/
 test/
-
-# Secrets and Env
-.env
-.env.*
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-
-# Documentation 
 docs/
 examples/
+tests/
 
+# Editor & System
+.vscode/
+.idea/
+.DS_Store
+*.swp
 
+# Logs & Temp
+*.log
+npm-debug.log*
+*.tmp
+*.temp
 
-# Source bin files (compiled versions are in dist/bin)
-bin/
-
-
+# Secrets (Double safety)
+.env
+.env.*

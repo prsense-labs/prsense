@@ -23,6 +23,37 @@ npm run server
 
 ---
 
+## ⚡ Zero Config Mode (Fastest Start)
+
+> [!TIP]
+> **No API key? No problem!** PRSense works immediately using local ONNX embeddings.
+
+```bash
+# 1. Clone & install
+git clone https://github.com/prsense-labs/prsense
+cd prsense
+npm install
+npm run build
+
+# 2. Run immediately — no API key needed!
+npx prsense check --title "Fix login bug" --files "auth.ts"
+```
+
+**Output:**
+```
+📦 Using ONNX local embeddings (no API key found)
+🔍 Checking PR...
+✅ UNIQUE (Confidence: 0.000)
+```
+
+This uses:
+- **SQLite** (auto-created, no setup)
+- **ONNX embeddings** (runs 100% locally, privacy-first)
+
+**Want higher accuracy?** Add an OpenAI key (see below). **Need scale?** Use PostgreSQL (see [production-setup.md](production-setup.md)).
+
+---
+
 ## Detailed Installation
 
 ### Prerequisites
@@ -173,7 +204,10 @@ NODE_ENV=production
 
 ## Step 5: Get API Keys
 
-### OpenAI API Key (Required)
+### OpenAI API Key (Optional - for higher accuracy)
+
+> [!NOTE]
+> This is **optional**. Without an API key, PRSense uses local ONNX embeddings automatically.
 
 1. Go to: https://platform.openai.com/api-keys
 2. Click "Create new secret key"

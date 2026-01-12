@@ -1,0 +1,33 @@
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to ask a question! 
+        Please search existing discussions first to avoid duplicates.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: How do I tune the duplicate threshold for my repo?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (optional)
+      description: Any additional context about your use case
+      placeholder: I have a monorepo with 500+ PRs/month...
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - General Usage
+        - Configuration & Tuning
+        - Deployment
+        - Integration
+        - Other
+    validations:
+      required: true
