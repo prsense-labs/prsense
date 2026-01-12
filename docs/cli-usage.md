@@ -10,6 +10,18 @@ Think of it like a **spell-checker for PRs** - run it before you submit!
 
 ## Installation
 
+### Option 1: NPM (Recommended)
+
+Install globally to use `prsense` anywhere:
+
+```bash
+npm install -g prsense
+```
+
+### Option 2: Build from Source (Advanced)
+
+If you want to contribute or modify the code:
+
 ```bash
 # 1. Clone repo
 git clone https://github.com/prsense-labs/prsense
@@ -21,10 +33,8 @@ npm install
 # 3. Build
 npm run build
 
-# 4. Add OpenAI key
+# 4. Add OpenAI key (optional)
 echo "OPENAI_API_KEY=sk-your-key" > .env
-
-# Done! Ready to use.
 ```
 
 ---
@@ -46,7 +56,7 @@ cat > my-pr.json << 'EOF'
 EOF
 
 # Check for duplicates
-npm run cli check my-pr.json
+prsense check my-pr.json
 ```
 
 **Output if duplicate:**
@@ -82,18 +92,18 @@ npm run cli check my-pr.json
 ### 1. Check for Duplicates
 
 ```bash
-npm run cli check <pr-file.json>
+prsense check <pr-file.json>
 ```
 
 **Example:**
 ```bash
-npm run cli check my-pr.json
+prsense check my-pr.json
 ```
 
 ### 2. View Statistics
 
 ```bash
-npm run cli stats
+prsense stats
 ```
 
 **Output:**
@@ -108,7 +118,7 @@ Bloom filter size: 8192 bits
 ### 3. Get Help
 
 ```bash
-npm run cli help
+prsense help
 ```
 
 **Output:**
@@ -155,7 +165,7 @@ cat > /tmp/pr-check.json << EOF
 EOF
 
 # Check for duplicates
-npm run cli check /tmp/pr-check.json
+prsense check /tmp/pr-check.json
 
 # Prompt user
 if [ $? -eq 1 ]; then
@@ -188,8 +198,7 @@ cat > /tmp/pr-check.json << EOF
 EOF
 
 # Check
-cd /path/to/prsense
-npm run cli check /tmp/pr-check.json
+prsense check /tmp/pr-check.json
 
 if [ $? -eq 1 ]; then
   echo "❌ Duplicate detected. Push cancelled."
@@ -217,12 +226,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Clone PRSense
-        run: |
-          git clone https://github.com/prsense-labs/prsense
-          cd prsense
-          npm install
-          npm run build
+      - name: Install PRSense
+        run: npm install -g prsense
       
       - name: Create PR data
         run: |
@@ -239,8 +244,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          cd prsense
-          npm run cli check ../pr.json || echo "⚠️ Possible duplicate"
+          prsense check pr.json || echo "⚠️ Possible duplicate"
 ```
 
 ---
@@ -301,7 +305,7 @@ EOF
 
 for pr_file in prs/*.json; do
   echo "Checking $pr_file..."
-  npm run cli check "$pr_file"
+  prsense check "$pr_file"
   echo "---"
 done
 ```
@@ -316,7 +320,7 @@ DUPLICATE_THRESHOLD=0.95    # Stricter
 POSSIBLE_THRESHOLD=0.85
 EOF
 
-npm run cli check pr.json
+prsense check pr.json
 ```
 
 ### Use with Different Embeddings
@@ -326,7 +330,7 @@ npm run cli check pr.json
 echo "EMBEDDING_SERVICE_URL=http://localhost:8000" >> .env
 # Leave OPENAI_API_KEY blank
 
-npm run cli check pr.json
+prsense check pr.json
 ```
 
 ---
@@ -341,7 +345,7 @@ The CLI returns different exit codes:
 
 **Use in scripts:**
 ```bash
-npm run cli check pr.json
+prsense check pr.json
 if [ $? -eq 0 ]; then
   echo "✅ Safe to submit"
 else
@@ -379,11 +383,10 @@ cat pr.json | jq .
 ### "File not found"
 ```bash
 # Use absolute path
-npm run cli check /full/path/to/pr.json
+prsense check /full/path/to/pr.json
 
-# Or relative to prsense directory
-cd prsense
-npm run cli check ../my-pr.json
+# Or relative
+prsense check ../my-pr.json
 ```
 
 ---
@@ -420,7 +423,7 @@ npm run cli check ../my-pr.json
     {
       "label": "Check for Duplicate PR",
       "type": "shell",
-      "command": "npm run cli check pr.json",
+      "command": "prsense check pr.json",
       "group": "test"
     }
   ]
@@ -430,14 +433,14 @@ npm run cli check ../my-pr.json
 ### Make Command
 ```makefile
 check-duplicate:
-	@npm run cli check pr.json
+	@prsense check pr.json
 ```
 
 ### NPM Script
 ```json
 {
   "scripts": {
-    "pre-commit": "npm run cli check pr.json"
+    "pre-commit": "prsense check pr.json"
   }
 }
 ```
@@ -447,7 +450,7 @@ check-duplicate:
 ## FAQ
 
 **Q: Do I need to install PRSense globally?**  
-A: No, just clone it once and use from that directory.
+A: No, you can install it locally (`npm install prsense`) or use `npx prsense` without installing.
 
 **Q: Can I use it offline?**  
 A: Yes, with local embeddings (no OpenAI needed).

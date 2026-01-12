@@ -4,7 +4,7 @@
  * Install: npm install better-sqlite3
  */
 
-import type { StorageBackend, PRRecord } from './interface.js'
+import type { StorageBackend, PRRecord, CheckResult, AnalyticsData } from './interface.js'
 
 export class SQLiteStorage implements StorageBackend {
     private dbPath: string
@@ -33,9 +33,22 @@ export class SQLiteStorage implements StorageBackend {
                 )
             `)
 
+            // Create analytics table
+            this.db.exec(`
+                CREATE TABLE IF NOT EXISTS check_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pr_id INTEGER,
+                    result_type TEXT,
+                    original_pr_id INTEGER,
+                    confidence REAL,
+                    timestamp INTEGER
+                )
+            `)
+
             // Create index for faster lookups
             this.db.exec(`
-                CREATE INDEX IF NOT EXISTS idx_created_at ON prs(created_at DESC)
+                CREATE INDEX IF NOT EXISTS idx_created_at ON prs(created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_check_timestamp ON check_results(timestamp DESC);
             `)
         } catch (error) {
             const err = error as Error
@@ -66,6 +79,72 @@ export class SQLiteStorage implements StorageBackend {
             Buffer.from(record.diffEmbedding.buffer),
             record.createdAt
         )
+    }
+
+    async saveCheck(result: CheckResult): Promise<void> {
+        if (!this.db) await this.init()
+
+        const stmt = this.db.prepare(`
+            INSERT INTO check_results 
+            (pr_id, result_type, original_pr_id, confidence, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        `)
+
+        stmt.run(
+            result.prId,
+            result.resultType,
+            result.originalPrId || null,
+            result.confidence,
+            result.timestamp
+        )
+    }
+
+    async getAnalytics(): Promise<AnalyticsData> {
+        if (!this.db) await this.init()
+
+        // Get summary stats
+        const summary = this.db.prepare(`
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN result_type = 'DUPLICATE' THEN 1 ELSE 0 END) as duplicates,
+                SUM(CASE WHEN result_type = 'POSSIBLE' THEN 1 ELSE 0 END) as possible,
+                SUM(CASE WHEN result_type = 'UNIQUE' THEN 1 ELSE 0 END) as unique_prs
+            FROM check_results
+        `).get()
+
+        const totalPRs = summary?.total || 0
+        const duplicatesFound = summary?.duplicates || 0
+        const possibleDuplicates = summary?.possible || 0
+        const uniquePRs = summary?.unique_prs || 0
+
+        // Get monthly timeline (last 6 months)
+        const timeline = this.db.prepare(`
+            SELECT 
+                strftime('%Y-%m', datetime(timestamp / 1000, 'unixepoch')) as date,
+                SUM(CASE WHEN result_type = 'DUPLICATE' THEN 1 ELSE 0 END) as duplicates,
+                SUM(CASE WHEN result_type = 'POSSIBLE' THEN 1 ELSE 0 END) as possible,
+                SUM(CASE WHEN result_type = 'UNIQUE' THEN 1 ELSE 0 END) as unique_prs
+            FROM check_results
+            GROUP BY date
+            ORDER BY date DESC
+            LIMIT 6
+        `).all().reverse()
+
+        return {
+            summary: {
+                totalPRs,
+                duplicatesFound,
+                possibleDuplicates,
+                uniquePRs,
+                detectionRate: totalPRs > 0 ? ((duplicatesFound + possibleDuplicates) / totalPRs * 100) : 0
+            },
+            timeline: timeline.map((row: any) => ({
+                date: row.date,
+                duplicates: row.duplicates,
+                possible: row.possible,
+                unique: row.unique_prs
+            }))
+        }
     }
 
     async get(prId: number): Promise<PRRecord | null> {

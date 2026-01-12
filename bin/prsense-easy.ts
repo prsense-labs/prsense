@@ -260,6 +260,47 @@ async function quickCheck() {
     }
 }
 
+// Manual check (from file)
+async function manualCheck(filePath: string) {
+    if (!existsSync(filePath)) {
+        log.error(`File not found: ${filePath}`)
+        process.exit(1)
+    }
+
+    try {
+        const prData = JSON.parse(readFileSync(filePath, 'utf-8'))
+        log.title(`🔍 Checking PR #${prData.prId}: ${prData.title}`)
+
+        const embedder = getEmbedder()
+        const detector = new PRSenseDetector({ embedder })
+
+        console.log('🔄 Analyzing...\n')
+        const result = await detector.check(prData)
+
+        log.title('📊 Results')
+
+        if (result.type === 'DUPLICATE') {
+            log.error(`DUPLICATE of PR #${result.originalPr}`)
+            console.log(`   Confidence: ${(result.confidence * 100).toFixed(1)}%`)
+            console.log('\n💡 This PR appears to be a duplicate!')
+            console.log('   Check the original PR before submitting.\n')
+            process.exit(1)
+        } else if (result.type === 'POSSIBLE') {
+            log.warning(`POSSIBLY similar to PR #${result.originalPr}`)
+            console.log(`   Confidence: ${(result.confidence * 100).toFixed(1)}%`)
+            console.log('\n💡 Review the similar PR to avoid duplication.\n')
+            process.exit(0)
+        } else {
+            log.success('UNIQUE - No duplicates found!')
+            console.log('   Safe to submit this PR 🚀\n')
+            process.exit(0)
+        }
+    } catch (error) {
+        log.error(`Failed to read or parse PR file: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+    }
+}
+
 // Show stats
 async function showStats() {
     const embedder = getEmbedder()
@@ -330,7 +371,12 @@ ${colors.reset}`)
 
         case 'check':
         case undefined: // Default to auto-check
-            await autoCheck()
+            const targetFile = process.argv[3]
+            if (targetFile && !targetFile.startsWith('-')) {
+                await manualCheck(targetFile)
+            } else {
+                await autoCheck()
+            }
             break
 
         case 'quick':

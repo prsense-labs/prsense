@@ -12,11 +12,40 @@ export interface PRRecord {
     createdAt: number
 }
 
+export interface CheckResult {
+    prId: number
+    resultType: 'DUPLICATE' | 'POSSIBLE' | 'UNIQUE'
+    originalPrId?: number
+    confidence: number
+    timestamp: number
+}
+
+export interface AnalyticsData {
+    summary: {
+        totalPRs: number
+        duplicatesFound: number
+        possibleDuplicates: number
+        uniquePRs: number
+        detectionRate: number
+    }
+    timeline: Array<{ date: string; duplicates: number; possible: number; unique: number }>
+}
+
 export interface StorageBackend {
     /**
      * Save a PR and its embeddings
      */
     save(record: PRRecord): Promise<void>
+
+    /**
+     * Save a check result for analytics
+     */
+    saveCheck(result: CheckResult): Promise<void>
+
+    /**
+     * Get analytics data
+     */
+    getAnalytics(): Promise<AnalyticsData>
 
     /**
      * Get a PR by ID

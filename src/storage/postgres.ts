@@ -7,7 +7,7 @@
  * 3. CREATE EXTENSION vector;
  */
 
-import type { StorageBackend, PRRecord } from './interface.js'
+import type { StorageBackend, PRRecord, CheckResult, AnalyticsData } from './interface.js'
 import { StorageError } from '../errors.js'
 
 export interface PostgresConfig {
@@ -25,7 +25,7 @@ interface Pool {
 }
 
 interface PoolConstructor {
-    new (config: { connectionString?: string; host?: string; port?: number; database?: string; user?: string; password?: string }): Pool
+    new(config: { connectionString?: string; host?: string; port?: number; database?: string; user?: string; password?: string }): Pool
 }
 
 export class PostgresStorage implements StorageBackend {
@@ -49,7 +49,7 @@ export class PostgresStorage implements StorageBackend {
                     throw new StorageError('pg module Pool export not found')
                 }
 
-                const poolConfig: { connectionString?: string; host?: string; port?: number; database?: string; user?: string; password?: string } = 
+                const poolConfig: { connectionString?: string; host?: string; port?: number; database?: string; user?: string; password?: string } =
                     this.config.connectionString
                         ? { connectionString: this.config.connectionString }
                         : {
@@ -59,7 +59,7 @@ export class PostgresStorage implements StorageBackend {
                             ...(this.config.user ? { user: this.config.user } : {}),
                             ...(this.config.password ? { password: this.config.password } : {})
                         }
-                
+
                 this.pool = new Pool(poolConfig)
 
                 // Test connection
@@ -85,6 +85,18 @@ export class PostgresStorage implements StorageBackend {
                     )
                 `)
 
+                // Create analytics table
+                await this.pool.query(`
+                    CREATE TABLE IF NOT EXISTS check_results (
+                        id SERIAL PRIMARY KEY,
+                        pr_id INTEGER,
+                        result_type TEXT,
+                        original_pr_id INTEGER,
+                        confidence REAL,
+                        timestamp BIGINT
+                    )
+                `)
+
                 // Create vector index for fast similarity search (only if pgvector is available)
                 try {
                     await this.pool.query(`
@@ -98,7 +110,9 @@ export class PostgresStorage implements StorageBackend {
 
                 await this.pool.query(`
                     CREATE INDEX IF NOT EXISTS idx_created_at 
-                    ON prs(created_at DESC)
+                    ON prs(created_at DESC);
+                    CREATE INDEX IF NOT EXISTS idx_check_timestamp 
+                    ON check_results(timestamp DESC);
                 `)
 
                 return // Success
@@ -150,6 +164,87 @@ export class PostgresStorage implements StorageBackend {
                 `Failed to save PR record: ${error instanceof Error ? error.message : String(error)}`,
                 error instanceof Error ? error : undefined
             )
+        }
+    }
+
+    async saveCheck(result: CheckResult): Promise<void> {
+        if (!this.pool) await this.init()
+        if (!this.pool) {
+            throw new StorageError('Failed to initialize database connection')
+        }
+
+        try {
+            await this.pool.query(`
+                INSERT INTO check_results 
+                (pr_id, result_type, original_pr_id, confidence, timestamp)
+                VALUES ($1, $2, $3, $4, $5)
+            `, [
+                result.prId,
+                result.resultType,
+                result.originalPrId || null,
+                result.confidence,
+                result.timestamp
+            ])
+        } catch (error) {
+            console.error('Failed to save check result:', error)
+        }
+    }
+
+    async getAnalytics(): Promise<AnalyticsData> {
+        if (!this.pool) await this.init()
+        if (!this.pool) {
+            throw new StorageError('Failed to initialize database connection')
+        }
+
+        try {
+            const summaryResult = await this.pool.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN result_type = 'DUPLICATE' THEN 1 ELSE 0 END) as duplicates,
+                    SUM(CASE WHEN result_type = 'POSSIBLE' THEN 1 ELSE 0 END) as possible,
+                    SUM(CASE WHEN result_type = 'UNIQUE' THEN 1 ELSE 0 END) as unique_prs
+                FROM check_results
+            `)
+
+            const summary = summaryResult.rows[0] as any
+            const totalPRs = parseInt(summary.total || '0')
+            const duplicatesFound = parseInt(summary.duplicates || '0')
+            const possibleDuplicates = parseInt(summary.possible || '0')
+            const uniquePRs = parseInt(summary.unique_prs || '0')
+
+            const timelineResult = await this.pool.query(`
+                SELECT 
+                    to_char(to_timestamp(timestamp / 1000), 'YYYY-MM') as date,
+                    SUM(CASE WHEN result_type = 'DUPLICATE' THEN 1 ELSE 0 END) as duplicates,
+                    SUM(CASE WHEN result_type = 'POSSIBLE' THEN 1 ELSE 0 END) as possible,
+                    SUM(CASE WHEN result_type = 'UNIQUE' THEN 1 ELSE 0 END) as unique_prs
+                FROM check_results
+                GROUP BY date
+                ORDER BY date DESC
+                LIMIT 6
+            `)
+
+            return {
+                summary: {
+                    totalPRs,
+                    duplicatesFound,
+                    possibleDuplicates,
+                    uniquePRs,
+                    detectionRate: totalPRs > 0 ? ((duplicatesFound + possibleDuplicates) / totalPRs * 100) : 0
+                },
+                timeline: timelineResult.rows.reverse().map((row: any) => ({
+                    date: row.date,
+                    duplicates: parseInt(row.duplicates || '0'),
+                    possible: parseInt(row.possible || '0'),
+                    unique: parseInt(row.unique_prs || '0')
+                }))
+            }
+        } catch (error) {
+            console.error('Failed to get analytics:', error)
+            return {
+                summary: { totalPRs: 0, duplicatesFound: 0, possibleDuplicates: 0, uniquePRs: 0, detectionRate: 0 },
+                timeline: []
+            }
         }
     }
 
@@ -271,12 +366,12 @@ export class PostgresStorage implements StorageBackend {
         try {
             const textEmbStr = String(row.text_embedding || '')
             const diffEmbStr = String(row.diff_embedding || '')
-            
+
             // Handle both array format [1,2,3] and vector format
-            const textArray = textEmbStr.startsWith('[') 
+            const textArray = textEmbStr.startsWith('[')
                 ? JSON.parse(textEmbStr)
                 : textEmbStr.slice(1, -1).split(',').map(Number).filter(n => !isNaN(n))
-            
+
             const diffArray = diffEmbStr.startsWith('[')
                 ? JSON.parse(diffEmbStr)
                 : diffEmbStr.slice(1, -1).split(',').map(Number).filter(n => !isNaN(n))

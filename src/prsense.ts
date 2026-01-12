@@ -236,6 +236,22 @@ export class PRSenseDetector {
         }
 
         const result = await this.checkInternal(sanitizedPR, options)
+
+        // Save check result for analytics if not dry-run
+        if (!options?.dryRun && this.storage) {
+            try {
+                await this.storage.saveCheck({
+                    prId: sanitizedPR.prId,
+                    resultType: result.type,
+                    confidence: result.confidence,
+                    timestamp: Date.now(),
+                    ...(result.type !== 'UNIQUE' ? { originalPrId: result.originalPr } : {})
+                })
+            } catch (error) {
+                console.error('Failed to save check result:', error)
+            }
+        }
+
         return {
             type: result.type,
             confidence: result.confidence,

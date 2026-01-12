@@ -4,7 +4,7 @@ import { PRSenseDetector } from './prsense.js'
 import type { PRInput } from './prsense.js'
 import { withCache } from './embeddingCache.js'
 import { createCrossRepoDetector } from './crossRepo.js'
-import type { StorageBackend, PRRecord } from './storage/interface.js'
+import type { StorageBackend, PRRecord, CheckResult, AnalyticsData } from './storage/interface.js'
 
 // Mock Embedder
 const mockEmbedder = {
@@ -31,6 +31,15 @@ class MockStorage implements StorageBackend {
 
     async save(record: PRRecord): Promise<void> {
         this.records.set(record.prId, record)
+    }
+
+    async saveCheck(result: CheckResult): Promise<void> { }
+
+    async getAnalytics(): Promise<AnalyticsData> {
+        return {
+            summary: { totalPRs: 0, duplicatesFound: 0, possibleDuplicates: 0, uniquePRs: 0, detectionRate: 0 },
+            timeline: []
+        }
     }
 
     async get(prId: number): Promise<PRRecord | null> {

@@ -220,11 +220,13 @@ describe('Enterprise: Error Handling', () => {
     it('should handle storage errors gracefully', async () => {
         const mockStorage: StorageBackend = {
             save: async () => { throw new Error('DB error') },
+            saveCheck: async () => { },
+            getAnalytics: async () => ({ summary: { totalPRs: 0, duplicatesFound: 0, possibleDuplicates: 0, uniquePRs: 0, detectionRate: 0 }, timeline: [] }),
             get: async () => null,
             getAll: async () => [],
             search: async () => [],
-            delete: async () => {},
-            close: async () => {}
+            delete: async () => { },
+            close: async () => { }
         }
 
         const detector = new PRSenseDetector({
