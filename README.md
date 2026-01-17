@@ -2,7 +2,7 @@
 
 # PRSense 
 
-**Production-Ready AI-Powered Pull Request Duplicate Detection**
+**Production-Ready Pull Request Duplicate Detection**
 
 > **Mission:** Build trustworthy tools that give repositories memory — reducing duplicate work while preserving contributor credit.
 
