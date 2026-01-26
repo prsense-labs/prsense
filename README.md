@@ -13,6 +13,8 @@ Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 
 [![npm version](https://img.shields.io/npm/v/prsense?color=blue)](https://www.npmjs.com/package/prsense)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![CI](https://github.com/prsense-labs/prsense/actions/workflows/ci.yml/badge.svg)](https://github.com/prsense-labs/prsense/actions)
+[![status](https://img.shields.io/badge/status-early--stage-orange)]()
 [![Tests](https://img.shields.io/badge/tests-127%20passed-brightgreen)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
