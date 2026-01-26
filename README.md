@@ -8,7 +8,6 @@
 
 Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 minutes.**
 
-[![GitHub Stars](https://img.shields.io/github/stars/prsense-labs/prsense?color=yellow)](https://github.com/prsense-labs/prsense/stargazers)
 
 [![GitHub stars](https://img.shields.io/github/stars/prsense-labs/prsense?style=social)](https://github.com/prsense-labs/prsense/stargazers)
 [![npm version](https://img.shields.io/npm/v/prsense?color=blue)](https://www.npmjs.com/package/prsense)
