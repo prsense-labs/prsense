@@ -99,7 +99,7 @@ Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 
 ```
 prsenses-labs/
 ├── package.json                # Monorepo Root
-├── PRSenses/                   # Core Library & API
+├── prsense/                   # Core Library & API
 │   ├── src/                    # Detection Logic
 │   └── action/                 # GitHub Action
 ├── prsense-vscode/             # VS Code Extension
