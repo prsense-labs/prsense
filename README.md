@@ -52,7 +52,7 @@
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 PRSense is built on a **Repository Memory** architecture with three key layers:
 
@@ -261,4 +261,4 @@ MIT License
 
 ---
 
-**PRSense** — Because duplicate PRs waste everyone's time. Let's fix that.
+**PRSense v1.0.2** — The Repository Memory Infrastructure. Because your codebase deserves a brain.
