@@ -1,5 +1,5 @@
-name: 'PRSense - Duplicate PR Detection'
-description: 'Automatically detect duplicate pull requests using AI-powered similarity analysis'
+name: 'PRSense - Repository Memory Infrastructure'
+description: 'Repository Memory Infrastructure for GitHub'
 author: 'PRSense Contributors'
 
 branding:

@@ -1,4 +1,4 @@
-name: PRSense Duplicate Detection
+name: PRSense Repository Memory
 
 on:
   pull_request:

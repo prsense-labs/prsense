@@ -27,15 +27,15 @@ app.get('/health', (req, res) => {
 app.post('/check', async (req, res) => {
   try {
     const { title, description, files, detailed, dryRun } = req.body
-    
+
     // Validate input
     if (!title) {
       return res.status(400).json({ error: 'Title is required' })
     }
-    
+
     // Check for duplicates (Feature 2: detailed breakdown, Feature 6: dry-run)
     let result: DetailedDetectionResult | Awaited<ReturnType<typeof detector.check>>
-    
+
     if (detailed) {
       result = await detector.checkDetailed({
         prId: Date.now(),
@@ -51,7 +51,7 @@ app.post('/check', async (req, res) => {
         files: files || []
       }, { dryRun: dryRun === true })
     }
-    
+
     // Return result with optional breakdown
     const response: any = {
       duplicate: result.type === 'DUPLICATE',
@@ -60,7 +60,7 @@ app.post('/check', async (req, res) => {
       originalPr: result.type !== 'UNIQUE' ? result.originalPr : null,
       confidence: (result.confidence * 100).toFixed(1) + '%'
     }
-    
+
     // Include breakdown if detailed (Feature 2)
     if (detailed && 'breakdown' in result && result.breakdown) {
       response.breakdown = {
@@ -71,9 +71,9 @@ app.post('/check', async (req, res) => {
         weights: result.breakdown.weights
       }
     }
-    
+
     res.json(response)
-    
+
   } catch (error: any) {
     console.error('Error:', error)
     res.status(500).json({ error: error.message })
@@ -84,13 +84,13 @@ app.post('/check', async (req, res) => {
 app.post('/check/batch', async (req, res) => {
   try {
     const { prs } = req.body
-    
+
     if (!Array.isArray(prs) || prs.length === 0) {
       return res.status(400).json({ error: 'prs array is required' })
     }
-    
+
     const results = await detector.checkMany(prs)
-    
+
     res.json({
       count: results.length,
       results: results.map(r => ({
@@ -101,7 +101,7 @@ app.post('/check/batch', async (req, res) => {
         processingTimeMs: r.processingTimeMs
       }))
     })
-    
+
   } catch (error: any) {
     console.error('Error:', error)
     res.status(500).json({ error: error.message })
@@ -112,19 +112,19 @@ app.post('/check/batch', async (req, res) => {
 app.post('/weights', (req, res) => {
   try {
     const { text, diff, file } = req.body
-    
+
     if (text === undefined || diff === undefined || file === undefined) {
       return res.status(400).json({ error: 'text, diff, and file weights are required' })
     }
-    
+
     detector.setWeights([text, diff, file])
     const currentWeights = detector.getWeights()
-    
+
     res.json({
       success: true,
       weights: currentWeights
     })
-    
+
   } catch (error: any) {
     console.error('Error:', error)
     res.status(500).json({ error: error.message })
@@ -147,7 +147,7 @@ app.get('/stats', (req, res) => {
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
-  console.log(`✅ PRSense API running on port ${PORT}`)
+  console.log(`✅ PRSense Repository Memory API running on port ${PORT}`)
   console.log(` Endpoints:`)
   console.log(`   GET  /health      - Health check`)
   console.log(`   POST /check       - Check for duplicates`)

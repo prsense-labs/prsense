@@ -4,6 +4,7 @@
  * Simplified interface for duplicate PR detection
  */
 
+import { createHash } from 'crypto'
 import type { PRMetadata } from './types.js'
 import type { StorageBackend } from './storage/interface.js'
 import { BloomFilter } from './bloomFilter.js'
@@ -11,13 +12,9 @@ import { AttributionGraph } from './attributionGraph.js'
 import { EmbeddingPipeline } from './embeddingPipeline.js'
 import type { Embedder } from './embeddingPipeline.js'
 import { withCache, EmbeddingCache } from './embeddingCache.js'
-import { CandidateRetriever } from './candidateRetriever.js'
 import { jaccard } from './jaccard.js'
 import { cosine } from './similarity.js'
-import { rank } from './ranker.js'
-import { classify } from './thresholds.js'
-import { decide } from './decisionEngine.js'
-import { validatePRInput, validateWeights, validateThresholds, sanitizeString, sanitizeFilePath } from './validation.js'
+import { validatePRInput, validateWeights, validateThresholds, validateConfig, sanitizeString, sanitizeFilePath } from './validation.js'
 import { ConfigurationError, ValidationError, EmbeddingError } from './errors.js'
 
 /**
@@ -136,26 +133,12 @@ export class PRSenseDetector {
             validateWeights(config.weights)
         }
 
-        // Validate bloom filter size
-        if (config.bloomFilterSize !== undefined) {
-            if (!Number.isInteger(config.bloomFilterSize) || config.bloomFilterSize < 64 || config.bloomFilterSize > 67108864) {
-                throw new ConfigurationError('bloomFilterSize must be an integer between 64 and 67108864')
-            }
-        }
-
-        // Validate max candidates
-        if (config.maxCandidates !== undefined) {
-            if (!Number.isInteger(config.maxCandidates) || config.maxCandidates < 1 || config.maxCandidates > 1000) {
-                throw new ConfigurationError('maxCandidates must be an integer between 1 and 1000')
-            }
-        }
-
-        // Validate cache size if caching enabled
-        if (config.enableCache && config.cacheSize !== undefined) {
-            if (!Number.isInteger(config.cacheSize) || config.cacheSize < 1 || config.cacheSize > 100000) {
-                throw new ConfigurationError('cacheSize must be an integer between 1 and 100000')
-            }
-        }
+        // Validate bloom filter size, maxCandidates, and cacheSize
+        validateConfig({
+            ...(config.bloomFilterSize !== undefined ? { bloomFilterSize: config.bloomFilterSize } : {}),
+            ...(config.maxCandidates !== undefined ? { maxCandidates: config.maxCandidates } : {}),
+            ...(config.enableCache && config.cacheSize !== undefined ? { cacheSize: config.cacheSize } : {})
+        })
 
         this.config = config
         this.bloom = new BloomFilter(config.bloomFilterSize || 8192, 5)
@@ -183,10 +166,32 @@ export class PRSenseDetector {
         this.weights = config.weights ?? [0.45, 0.35, 0.20]
         this.maxCandidates = config.maxCandidates ?? 20
 
-        // Initialize from storage if available
+        // NOTE: Call await detector.init() after construction to load from storage.
+        // The constructor cannot be async, so storage loading is deferred.
+    }
+
+    /**
+     * Initialize the detector, loading any persisted state from storage.
+     * Must be called after construction if using persistent storage.
+     * 
+     * ```typescript
+     * const detector = new PRSenseDetector({ embedder, storage })
+     * await detector.init()
+     * ```
+     */
+    async init(): Promise<void> {
         if (this.storage) {
-            this.loadFromStorage()
+            await this.loadFromStorage()
         }
+    }
+
+    /**
+     * Compute a content hash for the PR
+     */
+    private computeContentHash(title: string, description: string, diff: string = ''): string {
+        return createHash('sha1')
+            .update(title + description + diff)
+            .digest('hex')
     }
 
     /**
@@ -212,7 +217,8 @@ export class PRSenseDetector {
                     createdAt: record.createdAt,
                     files: record.files
                 })
-                this.bloom.add(`pr-${record.prId}`)
+                const contentHash = this.computeContentHash(record.title, record.description, '')
+                this.bloom.add(contentHash)
             }
         } catch (e) {
             console.error('Failed to load from storage:', e)
@@ -399,16 +405,12 @@ export class PRSenseDetector {
         }
 
         // 2. Fast rejection with Bloom filter
-        // Logic fix: Bloom filter tracks IDs we've seen. 
-        // We only skip if we've seen this EXACT PR ID before AND we want to avoid re-work?
-        // But for duplicate detection, we compare against OTHERS.
-        // So checking if 'pr-ID' is in bloom only tells us if WE are in the index.
-        // It does NOT tell us if a duplicate exists.
-        // We should REMOVE this fast rejection based on ID for "UNIQUE" result.
+        // We track CONTENT hashes to detect if we've processed this exact PR contents before.
+        const contentHash = this.computeContentHash(pr.title, pr.description, pr.diff)
 
-        // However, if we've ALREADY indexed this PR, maybe we should treat it differently?
-        // But the check method is often called to check BEFORE indexing.
-        // So we proceed to search.
+        // Note: Standard Bloom Filters cannot detect *similar* items, only *exact* duplicates.
+        // A true "Fast Path" for similarity would require LSH (Locality Sensitive Hashing),
+        // which is a future roadmap item. For now, we optimistically proceed to Vector Search.
 
         // 3. Find candidates (simplified ANN - iterate all for now)
         const candidates = await this.findCandidates(textEmbedding, this.maxCandidates)
@@ -526,7 +528,10 @@ export class PRSenseDetector {
         textEmbedding: Float32Array,
         diffEmbedding: Float32Array
     ): Promise<void> {
-        this.bloom.add(`pr-${pr.prId}`)
+        // Add content hash to Bloom Filter (use content hash, not ID)
+        const contentHash = this.computeContentHash(pr.title, pr.description, pr.diff)
+        this.bloom.add(contentHash)
+
         this.embeddings.set(pr.prId, { text: textEmbedding, diff: diffEmbedding })
         this.metadata.set(pr.prId, {
             prId: pr.prId,
@@ -557,15 +562,68 @@ export class PRSenseDetector {
         }
     }
 
+    /**
+     * Search for PRs using natural language query
+     */
+    async search(query: string, limit: number = 10): Promise<import('./types.js').SearchResult[]> {
+        // 1. Generate text embedding for query
+        let queryEmbedding: Float32Array
+        try {
+            const result = await this.pipeline.run(query, '', '')
+            queryEmbedding = result.textEmbedding
+        } catch (error) {
+            throw new EmbeddingError(`Failed to generate query embedding: ${error instanceof Error ? error.message : String(error)}`, error instanceof Error ? error : undefined)
+        }
+
+        // 2. Find similar PRs
+        const candidates = await this.findCandidates(queryEmbedding, limit)
+
+        // 3. Hydrate results
+        const results: import('./types.js').SearchResult[] = []
+        for (const candidate of candidates) {
+            const meta = this.metadata.get(candidate.prId)
+            if (meta) {
+                results.push({
+                    prId: candidate.prId,
+                    score: candidate.score,
+                    title: meta.title,
+                    description: meta.description,
+                    createdAt: meta.createdAt,
+                    files: meta.files || []
+                })
+            } else if (this.storage) {
+                // If not in memory but valid candidate (from storage search), fetch details
+                const record = await this.storage.get(candidate.prId)
+                if (record) {
+                    results.push({
+                        prId: record.prId,
+                        score: candidate.score,
+                        title: record.title,
+                        description: record.description,
+                        createdAt: record.createdAt,
+                        files: record.files
+                    })
+                }
+            }
+        }
+
+        return results
+    }
+
     private async findCandidates(
         queryEmbedding: Float32Array,
         k: number
     ): Promise<Array<{ prId: number; score: number }>> {
         // Use storage search if available and has efficient vector search (e.g. Postgres)
-        // For now we trust built-in memory index for speed unless storage is explicitly better
-        // But if memory is empty and storage has data (e.g. startup), we might want storage search
+        if (this.storage) {
+            try {
+                return await this.storage.search(queryEmbedding, k)
+            } catch (e) {
+                console.warn('Storage search failed, falling back to in-memory search', e)
+            }
+        }
 
-        // Simplified: score all PRs (in production, use ANN index)
+        // Fallback: score all PRs (in production, use ANN index)
         const scores: Array<{ prId: number; score: number }> = []
 
         for (const [prId, embeddings] of this.embeddings.entries()) {
@@ -579,29 +637,10 @@ export class PRSenseDetector {
             .slice(0, k)
     }
 
-    private computeScore(
-        textA: Float32Array,
-        textB: Float32Array,
-        diffA: Float32Array,
-        diffB: Float32Array,
-        fileScore: number
-    ): number {
-        const textSim = cosine(textA, textB)
-        const diffSim = cosine(diffA, diffB)
-
-        return (
-            this.weights[0] * textSim +
-            this.weights[1] * diffSim +
-            this.weights[2] * fileScore
-        )
-    }
-
-
-
     private countDuplicatePairs(): number {
         let count = 0
-        for (let i = 1; i <= this.embeddings.size; i++) {
-            count += this.graph.getAllDuplicates(i).length
+        for (const prId of this.embeddings.keys()) {
+            count += this.graph.getAllDuplicates(prId).length
         }
         return count
     }

@@ -1,9 +1,11 @@
-# 🚀 How People Actually Use PRSense
+#  Connecting the Repository Brain
 
 > [!TIP]
-> **New here?** Start with [START_HERE.md](../START_HERE.md) for a quick overview, then come back here for detailed setup instructions.
+> **New here?** Start with [START_HERE.md](../START_HERE.md) for a quick overview.
 
-## 6 Ways to Use It
+PRSense is not just a CLI tool; it is a **Memory Layer**. This guide explains how to connect that memory to your existing workflows.
+
+## 6 Ways to Connect
 
 ### 1️⃣ **GitHub Action** (Easiest)
 Drop into any workflow in seconds

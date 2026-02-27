@@ -1,13 +1,13 @@
 # Using PRSense as a GitHub Action
 
-This repository includes a GitHub Action for automatic duplicate PR detection.
+This repository includes a GitHub Action for Repository Memory and automatic duplicate PR detection.
 
 ## Quick Setup
 
 1. **Add the workflow file** to your repository at `.github/workflows/prsense.yml`:
 
 ```yaml
-name: PRSense Duplicate Detection
+name: PRSense Repository Memory
 
 on:
   pull_request:

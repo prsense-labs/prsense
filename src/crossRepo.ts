@@ -99,9 +99,16 @@ export class CrossRepoDetector {
         for (const [repoId, detector] of this.detectors.entries()) {
             if (repoId === pr.repoId) continue // Skip own repo
 
-            // Use a large offset to avoid ID collisions (add repo hash to make unique)
-            const repoHash = repoId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-            const tempPrId = pr.prId + 1000000 + (repoHash % 10000) // Ensure positive and unique
+            // Use a large offset to avoid ID collisions across repos.
+            // We XOR a djb2-style hash of the repoId with a large prime offset,
+            // then ensure the result stays positive and within safe integer range.
+            let repoHash = 5381
+            for (let ci = 0; ci < repoId.length; ci++) {
+                repoHash = ((repoHash << 5) + repoHash) ^ repoId.charCodeAt(ci)
+                repoHash = repoHash >>> 0 // keep as unsigned 32-bit
+            }
+            // Offset by 10^9 * (repoHash % 1000) to give a large, repo-specific namespace
+            const tempPrId = pr.prId + 1_000_000_000 + (repoHash % 1000) * 1_000_000
 
             const result = await detector.checkDetailed(
                 { ...pr, prId: tempPrId }, // Use offset ID to avoid collisions

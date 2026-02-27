@@ -25,3 +25,5 @@ export * from './embeddingCache.js'
 export * from './crossRepo.js'
 export * from './validation.js'
 export * from './errors.js'
+// Note: server.ts is intentionally NOT exported here.
+// Import directly from 'prsense/dist/src/server.js' if you need the Express server.

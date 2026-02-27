@@ -142,23 +142,44 @@ export class EmbeddingCache {
 }
 
 /**
- * Create a caching wrapper around any embedder
+ * Create a caching wrapper around any embedder.
+ * Caches individual embedText and embedDiff calls by their input text.
  */
 export function withCache<T extends { embedText: (text: string) => Promise<Float32Array>; embedDiff: (diff: string) => Promise<Float32Array> }>(
     embedder: T,
     cacheSize: number = 1000
 ): T & { cache: EmbeddingCache } {
     const cache = new EmbeddingCache(cacheSize)
+    // Simple per-call text caches (separate from the PR-level composite cache)
+    const textCache = new Map<string, Float32Array>()
+    const diffCache = new Map<string, Float32Array>()
 
     return {
         ...embedder,
         cache,
         async embedText(text: string): Promise<Float32Array> {
-            // For single embedText, we still call through (no content hash available)
-            return embedder.embedText(text)
+            const cached = textCache.get(text)
+            if (cached) return cached
+            const result = await embedder.embedText(text)
+            // Evict oldest if over capacity
+            if (textCache.size >= cacheSize) {
+                const firstKey = textCache.keys().next().value
+                if (firstKey) textCache.delete(firstKey)
+            }
+            textCache.set(text, result)
+            return result
         },
         async embedDiff(diff: string): Promise<Float32Array> {
-            return embedder.embedDiff(diff)
+            const cached = diffCache.get(diff)
+            if (cached) return cached
+            const result = await embedder.embedDiff(diff)
+            // Evict oldest if over capacity
+            if (diffCache.size >= cacheSize) {
+                const firstKey = diffCache.keys().next().value
+                if (firstKey) diffCache.delete(firstKey)
+            }
+            diffCache.set(diff, result)
+            return result
         }
     }
 }

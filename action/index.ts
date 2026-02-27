@@ -178,7 +178,7 @@ This pull request appears to be a **duplicate** of PR #${result.originalPr}.
 **Recommendation:** Please review PR #${result.originalPr} before proceeding. Consider collaborating on the existing PR instead of duplicating work.
 
 ---
-<sub> Powered by [PRSense](https://github.com/prsense-labs/prsense) - AI-powered duplicate PR detection</sub>`
+<sub> Powered by [PRSense](https://github.com/prsense-labs/prsense) - Repository Memory & Duplicate Detection</sub>`
     }
 
     if (result.type === 'POSSIBLE') {
@@ -191,7 +191,7 @@ This pull request **may be similar** to PR #${result.originalPr}.
 **Recommendation:** Please review PR #${result.originalPr} to check if there's overlap. If the PRs address different aspects, feel free to proceed!
 
 ---
-<sub> Powered by [PRSense](https://github.com/prsense-labs/prsense) - AI-powered duplicate PR detection</sub>`
+<sub> Powered by [PRSense](https://github.com/prsense-labs/prsense) - Repository Memory & Duplicate Detection</sub>`
     }
 
     return ''

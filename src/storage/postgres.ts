@@ -356,7 +356,7 @@ export class PostgresStorage implements StorageBackend {
         const prId = Number(row.pr_id) || 0
         const title = String(row.title || '')
         const description = String(row.description || '')
-        const files = Array.isArray(row.files) ? row.files.map(String) : JSON.parse(String(row.files || '[]'))
+        const files = Array.isArray(row.files) ? (row.files as string[]) : JSON.parse(String(row.files || '[]'))
         const createdAt = Number(row.created_at) || Date.now()
 
         // Parse vector embeddings safely
@@ -364,8 +364,14 @@ export class PostgresStorage implements StorageBackend {
         let diffEmbedding: Float32Array
 
         try {
-            const textEmbStr = String(row.text_embedding || '')
-            const diffEmbStr = String(row.diff_embedding || '')
+            // pgvector returns a string if simply selected, but if we select it as vector it might be different
+            // In our queries we select * so it comes as string usually or object if pg library parses it
+            const textEmbVal = row.text_embedding
+            const diffEmbVal = row.diff_embedding
+
+            // If pg-vector parses it, it might be different. Let's handle string case primarily as we saw in init
+            const textEmbStr = String(textEmbVal || '')
+            const diffEmbStr = String(diffEmbVal || '')
 
             // Handle both array format [1,2,3] and vector format
             const textArray = textEmbStr.startsWith('[')

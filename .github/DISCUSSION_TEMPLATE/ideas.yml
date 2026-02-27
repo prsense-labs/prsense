@@ -28,6 +28,8 @@ body:
       options:
         - CLI
         - GitHub Action
+        - Repository Memory
+        - Semantic Search
         - Library/API
         - Documentation
         - New Feature

@@ -50,7 +50,7 @@ export async function handlePullRequestWebhook(
     // Handle result
     if (result.type === 'DUPLICATE') {
         const confidence = Math.round(result.confidence * 100)
-        
+
         await github.issues.createComment({
             issue_number: pr.number,
             body: `
@@ -67,15 +67,15 @@ This PR appears to be a **duplicate** of #${result.originalPr} (${confidence}% c
 Comment \`@prsense-bot not-duplicate\` to override this detection.
 
 ---
-*Powered by [PRSense](https://github.com/prsense-labs/prsense)*
+*Powered by [PRSense](https://github.com/prsense-labs/prsense) - Repository Memory*
             `.trim()
         })
 
         console.log(`✅ Flagged as duplicate of #${result.originalPr}`)
-    } 
+    }
     else if (result.type === 'POSSIBLE') {
         const confidence = Math.round(result.confidence * 100)
-        
+
         await github.issues.createComment({
             issue_number: pr.number,
             body: `
@@ -86,12 +86,12 @@ This PR may be similar to #${result.originalPr} (${confidence}% confidence).
 Please review to ensure this is not a duplicate.
 
 ---
-*Powered by [PRSense](https://github.com/prsense-labs/prsense)*
+*Powered by [PRSense](https://github.com/prsense-labs/prsense) - Repository Memory*
             `.trim()
         })
 
         console.log(`⚠️  Possibly similar to #${result.originalPr}`)
-    } 
+    }
     else {
         console.log(`✅ No duplicates found`)
     }

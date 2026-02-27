@@ -26,7 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
  - OS: [e.g. Windows, macOS]
  - Node.js version: [e.g. 18.0.0]
- - PRSense version: [e.g. 1.0.0]
+ - PRSense version: [e.g. 1.0.2]
 
 **Additional context**
 Add any other context about the problem here.

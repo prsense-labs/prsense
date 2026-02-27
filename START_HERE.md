@@ -2,38 +2,34 @@
 
 ## What is PRSense?
 
-**PRSense = Bot that detects duplicate Pull Requests**
+**PRSense = The Repository Memory Infrastructure**
 
 Think of it like:
-- Gmail's spam filter, but for duplicate PRs
-- Shazam for code contributions
-- "You already have this" detector
+- **A Second Brain** for your engineering team
+- **Google** for your codebase's history
+- **Shazam** for duplicate contributions
 
 ---
 
 ## Why Do I Need This?
 
 ### Problem
-You maintain a repo. People submit the **same bug fix 10 times**:
-
-```
-Monday:    PR #1 - "Fix login crash"
-Tuesday:   PR #2 - "Resolve login issue"
-Wednesday: PR #3 - "Login bug fix"
-...
-```
-
-You waste **hours** reviewing duplicates.
+1. **Memory Loss**: Engineers leave, and context is lost. "Why did we fix this bug this way 3 years ago?"
+2. **Redundant Work**: People submit the **same bug fix 10 times**.
+3. **Lost Knowledge**: Great decisions are buried in closed PRs.
 
 ### Solution
-PRSense **automatically detects** duplicates:
+PRSense **remembers everything** and acts as your institutional memory:
 
 ```
-PR #2 opened → PRSense checks → Comments:
-"🔍 This is a duplicate of PR #1"
+1. Developer asks: "How do we handle auth retries?"
+   PRSense answers: "See PR #452 and #890 where we fixed race conditions."
 
-You save 30 minutes! ✨
+2. PR #2 opened → PRSense checks memory → Comments:
+   "🔍 This is a duplicate of PR #1. See context there."
 ```
+
+You save **hours** of research and review time! ✨
 
 ---
 
@@ -46,6 +42,9 @@ cd prsense && npm install && npm run build
 
 # Check for duplicates immediately — no API key needed!
 npx prsense check --title "Fix login bug" --files "auth.ts"
+
+# Ask your codebase a question (Semantic Search)
+npx prsense search "how did we fix the login crash last year?"
 ```
 
 > [!TIP]
@@ -124,6 +123,7 @@ Yes! Just use a GitHub token with `repo` access.
 
 ### "What if it makes mistakes?"
 - 95% accuracy with real embeddings
+- Semantic search understands intent, not just keywords
 - Maintainer always has final say
 - Can adjust thresholds (make stricter/looser)
 

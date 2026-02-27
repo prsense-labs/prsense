@@ -13,14 +13,23 @@ CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 SECURITY.md
 START_HERE.md
+COMMUNITY_ANNOUNCEMENT.md
 
 # Tests & Docs
 coverage/
 __tests__/
 test/
 docs/
+
 examples/
 tests/
+
+# Compiled test/debug files (shouldn't ship to users)
+dist/**/*.test.*
+dist/**/test.*
+dist/**/quick-test.*
+dist/**/*-debug.*
+dist/**/inline-test.*
 
 # Editor & System
 .vscode/
@@ -33,6 +42,9 @@ tests/
 npm-debug.log*
 *.tmp
 *.temp
+
+# Build artifacts
+*.tgz
 
 # Secrets (Double safety)
 .env

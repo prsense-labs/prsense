@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * EASY PRSense CLI - Auto-detects everything!
+ * PRSense CLI - Repository Memory Infrastructure
  * 
  * Just type: prsense
  * No files, no JSON, no manual work!
@@ -14,6 +14,11 @@ import { execSync } from 'child_process'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import * as readline from 'readline'
+import dotenv from 'dotenv'
+
+// Load environment variables immediately
+dotenv.config()
+
 
 // Colors for terminal
 const colors = {
@@ -313,26 +318,78 @@ async function showStats() {
     console.log(`Bloom filter size:     ${stats.bloomFilterSize} bits\n`)
 }
 
+// Semantic search
+async function searchPRs(query: string, limit: number = 10) {
+    log.title('🔍 Semantic Search')
+
+    if (!query) {
+        log.error('Please provide a search query')
+        console.log('\n💡 Usage: prsense search "your query here"\n')
+        process.exit(1)
+    }
+
+    console.log(`Query: ${colors.cyan}${query}${colors.reset}`)
+    console.log(`Limit: ${limit} results\n`)
+
+    const embedder = getEmbedder()
+    const detector = new PRSenseDetector({ embedder })
+
+    console.log('🔄 Searching...\n')
+
+    try {
+        const results = await detector.search(query, limit)
+
+        if (results.length === 0) {
+            log.warning('No matching PRs found')
+            console.log('\n💡 Try a different search query or index more PRs first.\n')
+            process.exit(0)
+        }
+
+        log.title(`📊 Found ${results.length} Result${results.length > 1 ? 's' : ''}`)
+
+        results.forEach((r, i) => {
+            const scoreBar = '█'.repeat(Math.round(r.score * 10)) + '░'.repeat(10 - Math.round(r.score * 10))
+            console.log(`${colors.bold}${i + 1}. PR #${r.prId}${colors.reset} - ${r.title}`)
+            console.log(`   ${colors.green}${scoreBar}${colors.reset} ${(r.score * 100).toFixed(1)}%`)
+            if (r.description) {
+                const desc = r.description.length > 80 ? r.description.slice(0, 77) + '...' : r.description
+                console.log(`   ${colors.cyan}${desc}${colors.reset}`)
+            }
+            if (r.files && r.files.length > 0) {
+                const fileList = r.files.slice(0, 3).join(', ')
+                const more = r.files.length > 3 ? ` +${r.files.length - 3} more` : ''
+                console.log(`   📂 ${fileList}${more}`)
+            }
+            console.log('')
+        })
+    } catch (error) {
+        log.error(`Search failed: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+    }
+}
+
 // Help
 function showHelp() {
     console.log(`
-${colors.bold}${colors.cyan}PRSense - AI-Powered Duplicate PR Detection${colors.reset}
+${colors.bold}${colors.cyan}PRSense - Repository Memory Infrastructure${colors.reset}
 
 ${colors.bold}USAGE:${colors.reset}
   prsense [command]
 
 ${colors.bold}COMMANDS:${colors.reset}
   ${colors.green}check${colors.reset}      Check current git branch for duplicates (auto-detects)
+  ${colors.green}search${colors.reset}     Search PRs using natural language (semantic search)
   ${colors.green}quick${colors.reset}      Quick interactive check (manual input)
   ${colors.green}setup${colors.reset}      Setup wizard (first-time configuration)
   ${colors.green}stats${colors.reset}      Show statistics
   ${colors.green}help${colors.reset}       Show this help
 
 ${colors.bold}EXAMPLES:${colors.reset}
-  prsense              # Auto-check current branch
-  prsense check        # Same as above
-  prsense quick        # Interactive mode
-  prsense setup        # Run setup wizard
+  prsense                          # Auto-check current branch
+  prsense check                    # Same as above
+  prsense search "auth bug fix"    # Search for similar PRs
+  prsense quick                    # Interactive mode
+  prsense setup                    # Run setup wizard
 
 ${colors.bold}GET STARTED:${colors.reset}
   Just run: prsense check
@@ -353,12 +410,12 @@ async function main() {
     const command = process.argv[2]
 
     // Logo
-    if (!command || command === 'check' || command === 'quick') {
+    if (!command || command === 'check' || command === 'quick' || command === 'search') {
         console.log(`${colors.cyan}
 ╔═══════════════════════════════════════╗
 ║                                       ║
-║         PRSense CLI v1.0              ║
-║   AI-Powered Duplicate Detection      ║
+║         PRSense CLI v1.0.2            ║
+║     Repository Memory Infrastructure  ║
 ║                                       ║
 ╚═══════════════════════════════════════╝
 ${colors.reset}`)
@@ -377,6 +434,13 @@ ${colors.reset}`)
             } else {
                 await autoCheck()
             }
+            break
+
+        case 'search':
+            const query = process.argv[3] || ''
+            const limitArg = process.argv[4]
+            const limit = limitArg ? parseInt(limitArg, 10) : 10
+            await searchPRs(query, limit)
             break
 
         case 'quick':

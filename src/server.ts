@@ -8,27 +8,55 @@ import cors from 'cors'
 import { handleWebhook } from './github-bot.js'
 import { createPostgresStorage } from './storage/postgres.js'
 import { SQLiteStorage } from './storage/sqlite.js'
+import { InMemoryStorage } from './storage/memory.js'
 import type { StorageBackend } from './storage/interface.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
 let storage: StorageBackend | null = null
+let storageInitialized = false
 
-// Initialize storage
+// Initialize storage (idempotent — safe to call multiple times)
 async function initStorage() {
-    if (process.env.DATABASE_URL) {
-        storage = createPostgresStorage()
-        // console.log('Using Postgres storage')
-    } else {
-        storage = new SQLiteStorage()
-        // console.log('Using SQLite storage')
-    }
+    if (storageInitialized) return
+    storageInitialized = true
 
-    // Attempt custom init if needed (casting to any to access init method if it exists on implementation)
-    // Both implementations have init() but interface doesn't strictly require it to be public for external callers
-    // in this context, but we know our implementations have it.
-    if ('init' in storage && typeof (storage as any).init === 'function') {
-        await (storage as any).init()
+    try {
+        if (process.env.DATABASE_URL) {
+            storage = createPostgresStorage()
+            console.log('✅ Using Postgres storage')
+        } else {
+            // Try SQLite first, fallback to InMemoryStorage if better-sqlite3 is not installed
+            try {
+                storage = new SQLiteStorage()
+                if ('init' in storage && typeof (storage as any).init === 'function') {
+                    await (storage as any).init()
+                }
+                console.log('✅ Using SQLite storage')
+            } catch (sqliteError: any) {
+                // Check if it's a missing dependency error
+                if (sqliteError?.message?.includes('better-sqlite3') || 
+                    sqliteError?.message?.includes('Cannot find package')) {
+                    console.warn('⚠️  SQLite not available (better-sqlite3 not installed)')
+                    console.log('📦 Falling back to InMemoryStorage')
+                    storage = new InMemoryStorage()
+                } else {
+                    // Re-throw if it's a different error
+                    throw sqliteError
+                }
+            }
+        }
+
+        // Attempt custom init if needed (for Postgres)
+        if (process.env.DATABASE_URL && 'init' in storage && typeof (storage as any).init === 'function') {
+            await (storage as any).init()
+        }
+    } catch (error) {
+        console.error('❌ Failed to initialize storage:', error)
+        // Fallback to InMemoryStorage as last resort
+        console.log('📦 Falling back to InMemoryStorage')
+        storage = new InMemoryStorage()
+        console.log('✅ Using InMemoryStorage (data will not persist)')
     }
 }
 
@@ -52,10 +80,14 @@ app.get('/health', (req, res) => {
 
 // Analytics endpoint
 app.get('/api/stats', async (req, res) => {
-    if (!storage) {
-        return res.status(503).json({ error: 'Storage not initialized' })
-    }
     try {
+        // Ensure storage is initialized
+        if (!storage) {
+            await initStorage()
+        }
+        if (!storage) {
+            return res.status(503).json({ error: 'Storage not initialized' })
+        }
         const stats = await storage.getAnalytics()
         res.json(stats)
     } catch (error) {
@@ -67,6 +99,10 @@ app.get('/api/stats', async (req, res) => {
 // Webhook endpoint
 app.post('/webhook', async (req, res) => {
     try {
+        // Ensure storage is initialized before handling webhook
+        if (!storage) {
+            await initStorage()
+        }
         const result = await handleWebhook(req.body)
         res.status(result.status).send(result.body)
     } catch (error) {
@@ -76,14 +112,27 @@ app.post('/webhook', async (req, res) => {
 })
 
 // Start server
-initStorage().then(() => {
-    app.listen(PORT, () => {
-        console.log(`🚀 PRSense server running on port ${PORT}`)
-        console.log(`📝 Webhook URL: http://localhost:${PORT}/webhook`)
-        console.log(`📊 Analytics API: http://localhost:${PORT}/api/stats`)
-        console.log(`❤️  Health check: http://localhost:${PORT}/health`)
+// Export for reuse
+export async function createApp() {
+    await initStorage()
+    return app
+}
+
+export async function startServer(port = PORT) {
+    await initStorage()
+    return app.listen(port, () => {
+        console.log(`🚀 PRSense server running on port ${port}`)
+        console.log(`📝 Webhook URL: http://localhost:${port}/webhook`)
+        console.log(`📊 Analytics API: http://localhost:${port}/api/stats`)
+        console.log(`❤️  Health check: http://localhost:${port}/health`)
     })
-}).catch(err => {
-    console.error('Failed to initialize storage:', err)
-    process.exit(1)
-})
+}
+
+// Only start if run directly
+import { fileURLToPath } from 'url'
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    startServer().catch(err => {
+        console.error('Failed to initialize storage:', err)
+        process.exit(1)
+    })
+}

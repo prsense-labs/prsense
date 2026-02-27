@@ -26,9 +26,12 @@ async function getDetector(): Promise<PRSenseDetector> {
 
         detector = new PRSenseDetector({
             embedder,
+            ...(storage ? { storage } : {}),
             duplicateThreshold: parseFloat(process.env.DUPLICATE_THRESHOLD || '0.90'),
             possibleThreshold: parseFloat(process.env.POSSIBLE_THRESHOLD || '0.82')
         })
+        // Load persisted state from storage
+        await detector.init()
     }
     return detector
 }
@@ -87,7 +90,13 @@ export async function handleWebhook(event: any): Promise<{ status: number; body:
 function verifySignature(event: any): boolean {
     const secret = process.env.GITHUB_WEBHOOK_SECRET
     if (!secret) {
-        console.warn('GITHUB_WEBHOOK_SECRET not set - skipping signature verification (development mode)')
+        // In development (NODE_ENV !== 'production'), allow unsigned requests with a warning.
+        // In production, always require a secret.
+        if (process.env.NODE_ENV === 'production') {
+            console.error('GITHUB_WEBHOOK_SECRET is not set — rejecting request for security')
+            return false
+        }
+        console.warn('GITHUB_WEBHOOK_SECRET not set — skipping signature verification (development mode only)')
         return true
     }
 

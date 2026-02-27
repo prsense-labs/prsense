@@ -11,7 +11,19 @@ export interface PRMetadata {
     title: string
     description: string
     createdAt: number
-    mergedAt?: number 
+    mergedAt?: number
+}
+
+/**
+ * Result of a semantic search query
+ */
+export interface SearchResult {
+    prId: number
+    score: number
+    title: string
+    description: string
+    createdAt: number
+    files: string[]
 }
 
 /**
@@ -46,9 +58,9 @@ export type MatchLevel = 'HIGH' | 'MEDIUM' | 'LOW'
  * Decision output consumed by bot / API layer
  */
 
-export type Decision = 
-| { type: 'DUPLICATE'; originalPr: number }
-| { type: 'POSSIBLE'; originalPr: number }
-| { type: 'IGNORE' }
+export type Decision =
+    | { type: 'DUPLICATE'; originalPr: number }
+    | { type: 'POSSIBLE'; originalPr: number }
+    | { type: 'IGNORE' }
 
 

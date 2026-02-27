@@ -1,60 +1,44 @@
-# Problem Statement
+# The Core Problem: Repository Amnesia
 
-## The Challenge
+## The "Memory Leak" in Modern Engineering
 
-Large open-source repositories and organizations face a **duplicate PR problem**:
+Every day, your team solves problems. They fix bugs, debate architecture, and reject bad approaches.
+But the moment that work is merged (or closed), it is **forgotten**.
 
-- Contributors submit PRs for bugs/features that have already been addressed
-- Maintainers waste time reviewing and rejecting duplicates
-- Original authors lose credit when similar work is merged independently
-- **Siloed Repositories**: Duplicates across microservices (e.g. config updates) go unnoticed
-- No automated system exists to detect semantic duplicates (not just textual diffs)
+CI/CD pipelines are **stateless**. They treat every Pull Request as the first line of code ever written.
+- They don't know that `auth.ts` was refactored 3 times last year.
+- They don't know that this exact bug fix was tried (and reverted) 6 months ago.
+- They don't know that 3 other people are writing the exact same function right now.
 
-## Real-World Impact
+**We call this "Repository Amnesia."**
 
-### For Maintainers
-- **Time waste**: Reviewing duplicate PRs takes hours per week
-- **Contributor frustration**: Rejecting PRs after review damages community relations
-- **Credit disputes**: Hard to prove who implemented a fix first
+## The Symptoms
 
-### For Contributors
-- **Wasted effort**: Implementing features that already exist
-- **Delayed feedback**: Finding out a PR is duplicate after days of review
-- **Lost credit**: Similar PRs merged without attribution
+### 1. The Duplicate Work (The Obvious Pain)
+*   **Symptom**: Contributors submit PRs for bugs/features that were already addressed.
+*   **Cost**: Wasted review cycles and frustration.
+*   **Why it happens**: No one has perfect recall of 5,000 closed PRs.
 
-## Current Solutions (and why they fail)
+### 2. The "Chesterton's Fence" Violation (The Hidden Pain)
+*   **Symptom**: A new hire removes a "weird check" in the code, not knowing it prevents a rare race condition discovered 2 years ago.
+*   **Cost**: Production outages and regressions.
+*   **Why it happens**: The *context* of the code (the "why") is buried in a closed PR from 2022.
 
-| Approach | Limitation |
-|----------|------------|
-| Manual review | Doesn't scale, requires maintainer expertise |
-| Text search | Misses semantic similarity (different wording, same intent) |
-| Commit diff comparison | Fails when implementation differs but solves same problem |
-| Issue tracking | Contributors don't always check existing issues |
-| Generic AI | **Black box decisions** destroy detailed trust (why is this a duplicate?) |
+### 3. The Context Switch Tax
+*   **Symptom**: "Wait, didn't we discuss this API design already?"
+*   **Cost**: Senior engineers spend hours digging through Slack/Jira to find old decisions.
 
-## What PRSense Solves
+## Why Current Tools Fail
 
-✅ **Semantic duplicate detection** — Matches intent, not just text  
-✅ **Attribution preservation** — Tracks original authorship via graph  
-✅ **Scalable** — Bloom filter + ANN avoids O(n²) comparisons  
-✅ **Trustworthy** — Conservative thresholds prevent false positives  
-✅ **Explainable** — "Why" breakdown builds trust (unlike black-box AI)
-✅ **Cross-Boundary** — Detects duplicates across multiple repositories  
+| Tool | Focus | The Gap |
+| :--- | :--- | :--- |
+| **Linters/CI** | **Syntax** | Checks *current* code. Knows nothing of *history*. |
+| **GitHub Search** | **Keywords** | Fails on "fix login" vs "auth patch" (semantic mismatch). |
+| **Copilot** | **Generation** | Generates *new* code. Has no knowledge of *your* specific architectural history. |
 
----
+## The Solution: A Repository Brain
 
-## Target Users
+PRSense is **Stateful Infrastructure**. It indexes your entire history—code, diffs, descriptions, comments—into a searchable **Memory Layer**.
 
-1. **Large OSS Projects** (Linux, Kubernetes, React, etc.)
-2. **Enterprise Mono-repos** (Google, Meta internal repos)
-3. **GitHub Bot Maintainers** (automation teams)
-4. **Code Review Platforms** (Gerrit, Phabricator integrations)
-
----
-
-## Success Metrics
-
-- **Precision**: % of flagged duplicates that are actually duplicates (target: >90%)
-- **Recall**: % of actual duplicates that are detected (target: >75%)
-- **Latency**: Detection time per PR (target: <500ms)
-- **Maintainer time saved**: Hours per week (measured via surveys)
+Instead of asking "Does this pass the linter?", PRSense asks:
+**"Has this been done before? And what did we learn?"**

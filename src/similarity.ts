@@ -7,11 +7,15 @@ export function cosine(
     a: Float32Array,
     b: Float32Array
 ): number {
+    if (a.length !== b.length) {
+        console.warn(`cosine: dimension mismatch (${a.length} vs ${b.length}) — results may be inaccurate. Ensure all embeddings use the same model.`)
+    }
+
     let dot = 0
     let normA = 0
     let normB = 0
 
-    const len = Math.min(a.length,b.length)
+    const len = Math.min(a.length, b.length)
 
     for (let i = 0; i < len; i++) {
         const aVal = a[i] ?? 0
@@ -19,11 +23,11 @@ export function cosine(
         dot += aVal * bVal
         normA += aVal * aVal
         normB += bVal * bVal
-        }
+    }
 
-        if (normA === 0 || normB === 0)
-            return 0
+    if (normA === 0 || normB === 0)
+        return 0
 
-        return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB))
 }
 

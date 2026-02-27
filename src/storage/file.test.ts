@@ -49,7 +49,9 @@ describe('FileStorage', () => {
 
         // Verify Bloom filter works
         // Accessing private property via any for testing
-        expect((newDetector as any).bloom.mightContain('pr-123')).toBe(true)
+        // Compute hash manually for verification (title: 'Test PR', description: 'Description', diff: '')
+        const hash = (newDetector as any).computeContentHash('Test PR', 'Description', '')
+        expect((newDetector as any).bloom.mightContain(hash)).toBe(true)
     })
 
     it('should handle missing file gracefully', async () => {

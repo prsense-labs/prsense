@@ -2,11 +2,11 @@
 
 # PRSense 
 
-**Production-Ready AI-Powered Pull Request Duplicate Detection**
+**The Repository Memory Infrastructure**
 
-> **Mission:** Build trustworthy tools that give repositories memory — reducing duplicate work while preserving contributor credit.
+> **Mission:** Transform stateless CI/CD into a stateful "Repository Brain" — giving engineering teams instant access to historical context, duplicate detection, and attribution.
 
-Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 minutes.**
+**Not just a tool. The Long-Term Memory for your Codebase.**
 
 [![npm version](https://img.shields.io/npm/v/prsense?color=blue)](https://www.npmjs.com/package/prsense)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -32,13 +32,13 @@ Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 
 ## Key Features
 
 ### Core Capabilities
-- **95% Accuracy** — Real OpenAI embeddings (or free local alternatives)
+- **Repository Memory** — Vector-indexes every PR, issue, and decision for long-term recall
+- **Semantic Search** — Ask "How did we fix this bug?" and get historical context
+- **Duplicate Detection** — 95% accuracy using OpenAI or local embeddings
 - **2ms Latency** — Bloom filter + ANN for sub-linear scaling
 - **Production Storage** — SQLite (dev) or PostgreSQL + pgvector (prod)
-- **GitHub Bot** — Auto-comments on duplicate PRs
-- **Deploy in 5min** — Vercel, Docker, or manual server
-- **Cost-Effective** — $0-50/month depending on scale
 - **Attribution Tracking** — Preserves original authorship credit
+- **Cost-Effective** — $0-50/month depending on scale
 
 ### Advanced Features
 - **Persistent Storage** — Exports for SQLite/Postgres
@@ -54,7 +54,25 @@ Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 
 
 ---
 
-## Architecture
+## 🏗 Architecture
+
+PRSense is built on a **Repository Memory** architecture with three key layers:
+
+### 1. Memory Layer (Storage)
+- **Ingestion**: Captures PRs, issues, and decisions.
+- **Storage**: Persists data in PostgreSQL (pgvector) or SQLite.
+- **Embeddings**: Converts code and text into vector semantic meaning.
+
+### 2. Recall Layer (Intelligence)
+- **Semantic Search**: Natural language query interface.
+- **Duplicate Detection**: The core pipeline for finding similar work.
+- **Cross-Repo**: Connects memory across multiple repositories.
+
+### 3. Operations Layer (Performance)
+- **Bloom Filters**: Instant rejection of unique items.
+- **Batch Processing**: Rapid historical backfilling.
+
+#### Detection Pipeline (Recall Detail)
 
 ```
 ┌─────────────┐
@@ -99,7 +117,7 @@ Automatically detect duplicate PRs and save hours of review time. **Deploy in 5 
 ```
 prsenses-labs/
 ├── package.json                # Monorepo Root
-├── PRSenses/                   # Core Library & API
+├── prsense/                   # Core Library & API
 │   ├── src/                    # Detection Logic
 │   └── action/                 # GitHub Action
 ├── prsense-vscode/             # VS Code Extension
@@ -187,11 +205,17 @@ if (result.type === 'DUPLICATE') {
   console.log(`Breakdown:`, result.breakdown)
   // Breakdown: { textSimilarity: 0.95, diffSimilarity: 0.88, ... }
 }
+
+// 4. Semantic Search
+const searchResults = await detector.search("fix login authentication race condition")
+console.log('Similar PRs:', searchResults)
 ```
+
+See the [API Reference](docs/api.md) for full documentation.
 
 ---
 
-## Documentation Index
+## Features
 
 - **[problem.md](docs/problem.md)** — Problem statement
 - **[algorithms.md](docs/algorithms.md)** — How it works (Deep Dive)

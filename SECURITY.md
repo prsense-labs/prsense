@@ -105,7 +105,7 @@ When deploying PRSense as a GitHub Action:
    ```
 2. **Pin Actions**: Use a specific commit hash or version tag to prevent supply chain attacks.
    ```yaml
-   uses: prsense-labs/prsense@v1.0.0 # Recommended
+   uses: prsense-labs/prsense@v1.0.2 # Recommended
    ```
 3. **Secrets**: Store `OPENAI_API_KEY` in GitHub Secrets, never in plain text.
 
@@ -140,5 +140,10 @@ Subscribe to security advisories:
 
 ---
 
-**Last Updated**: 2026-01-10
+| 1.0.x   | :white_check_mark: |
+| 1.0.2   | :white_check_mark: |
+
+...
+
+**Last Updated**: 2026-02-14
 **Security Contact**: security@prsense.dev

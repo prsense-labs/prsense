@@ -134,7 +134,7 @@ npm run build
 
 **Output:**
 ```
-> prsense@1.0.0 build
+> prsense@1.0.2 build
 > tsc
 
 # Creates dist/ folder with compiled JS

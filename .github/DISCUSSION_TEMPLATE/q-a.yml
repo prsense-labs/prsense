@@ -10,7 +10,7 @@ body:
     attributes:
       label: Your Question
       description: What would you like to know?
-      placeholder: How do I tune the duplicate threshold for my repo?
+      placeholder: How do I configure semantic search for my repo?
     validations:
       required: true
   - type: textarea

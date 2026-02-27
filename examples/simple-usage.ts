@@ -32,7 +32,7 @@ const detector = new PRSenseDetector({
 })
 
 async function main() {
-    console.log('🔍 PRSense Demo\n')
+    console.log('🔍 PRSense Repository Memory Demo\n')
 
     // Submit first PR
     console.log('Submitting PR #1...')
@@ -52,7 +52,7 @@ async function main() {
         description: 'Correctly validate empty password fields',
         files: ['auth/login.ts', 'auth/validation.ts']
     }, { dryRun: true })  // Feature 6: Dry-run mode
-    
+
     if (pr2Detailed.type !== 'UNIQUE' && pr2Detailed.breakdown) {
         console.log('Result:', pr2Detailed.type, 'of PR #' + pr2Detailed.originalPr)
         console.log('Confidence:', pr2Detailed.confidence)
