@@ -10,6 +10,7 @@ import { PRSenseDetector } from '../src/prsense.js'
 import { createOpenAIEmbedder } from '../src/embedders/openai.js'
 import { createONNXEmbedder } from '../src/embedders/onnx.js'
 import type { Embedder } from '../src/embeddingPipeline.js'
+import { DescriptionGenerator } from '../src/descriptionGenerator.js'
 import { execSync } from 'child_process'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -368,6 +369,53 @@ async function searchPRs(query: string, limit: number = 10) {
     }
 }
 
+async function generateDescription() {
+    log.title('🤖 AI-Powered PR Description')
+
+    const gitInfo = getGitInfo()
+    if (!gitInfo || !gitInfo.hasChanges) {
+        log.error('No local changes found to describe.')
+        process.exit(1)
+    }
+
+    log.info(`Analyzing ${gitInfo.files.length} changed files...`)
+
+    // Get full diff for description generation
+    let fullDiff = ''
+    try {
+        fullDiff = execSync('git diff HEAD~1', { encoding: 'utf-8', stdio: 'pipe' })
+    } catch (e) {
+        try {
+            fullDiff = execSync('git diff --cached', { encoding: 'utf-8', stdio: 'pipe' })
+        } catch (e) {
+            fullDiff = ''
+        }
+    }
+
+    const embedder = getEmbedder()
+    const detector = new PRSenseDetector({ embedder })
+    const generator = new DescriptionGenerator(detector)
+
+    const author = execSync('git config user.name', { encoding: 'utf-8', stdio: 'pipe' }).trim() || 'developer'
+
+    console.log('🔄 Generating description...\n')
+
+    try {
+        const desc = await generator.generate({
+            title: gitInfo.title || gitInfo.branch,
+            diff: fullDiff,
+            author,
+            files: gitInfo.files
+        })
+
+        console.log(desc)
+        console.log('\n✅ Use this in your pull request!')
+    } catch (error) {
+        log.error(`Description generation failed: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+    }
+}
+
 // Help
 function showHelp() {
     console.log(`
@@ -377,6 +425,7 @@ ${colors.bold}USAGE:${colors.reset}
   prsense [command]
 
 ${colors.bold}COMMANDS:${colors.reset}
+  ${colors.green}describe${colors.reset}   Generate an AI PR description based on local changes
   ${colors.green}check${colors.reset}      Check current git branch for duplicates (auto-detects)
   ${colors.green}search${colors.reset}     Search PRs using natural language (semantic search)
   ${colors.green}quick${colors.reset}      Quick interactive check (manual input)
@@ -385,6 +434,7 @@ ${colors.bold}COMMANDS:${colors.reset}
   ${colors.green}help${colors.reset}       Show this help
 
 ${colors.bold}EXAMPLES:${colors.reset}
+  prsense describe                 # Auto-generate PR description
   prsense                          # Auto-check current branch
   prsense check                    # Same as above
   prsense search "auth bug fix"    # Search for similar PRs
@@ -414,7 +464,7 @@ async function main() {
         console.log(`${colors.cyan}
 ╔═══════════════════════════════════════╗
 ║                                       ║
-║         PRSense CLI v1.0.2            ║
+║         PRSense CLI v1.1.0            ║
 ║     Repository Memory Infrastructure  ║
 ║                                       ║
 ╚═══════════════════════════════════════╝
@@ -434,6 +484,10 @@ ${colors.reset}`)
             } else {
                 await autoCheck()
             }
+            break
+
+        case 'describe':
+            await generateDescription()
             break
 
         case 'search':

@@ -1,17 +1,31 @@
 {
   "name": "prsense",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "The Repository Memory Infrastructure",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/src/server.js",
+      "types": "./dist/src/server.d.ts"
+    },
+    "./bot": {
+      "import": "./dist/src/github-bot.js",
+      "types": "./dist/src/github-bot.d.ts"
+    }
+  },
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/index.js",
+    "start": "node dist/src/server.js",
     "demo": "npm run build && node dist/examples/simple-usage.js",
     "demo:advanced": "npm run build && node dist/examples/advanced-usage.js",
     "cli": "npm run build && node dist/bin/prsense.js",
@@ -70,17 +84,38 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
+    "minimatch": "^9.0.5"
+  },
+  "peerDependencies": {
     "@actions/core": "^1.10.1",
     "@actions/github": "^6.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
     "express": "^4.18.2",
+    "cors": "^2.8.5",
     "express-rate-limit": "^8.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@actions/core": {
+      "optional": true
+    },
+    "@actions/github": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "cors": {
+      "optional": true
+    },
+    "express-rate-limit": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
+    "@types/minimatch": "^5.1.2",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.16.0",
     "@vitest/coverage-v8": "^3.1.0",

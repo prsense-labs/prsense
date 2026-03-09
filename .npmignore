@@ -1,51 +1,23 @@
-# Source Code (shipped in dist/)
+## Source files (only dist/ is published)
 src/
 bin/
-tsconfig.json
-vitest.config.ts
-
-# GitHub & CI
-.github/
+examples/
 action/
-.gitignore
-CHANGELOG.md
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-SECURITY.md
-START_HERE.md
-COMMUNITY_ANNOUNCEMENT.md
-
-# Tests & Docs
-coverage/
-__tests__/
-test/
 docs/
 
-examples/
-tests/
+## Test files
+*.test.ts
+*.test.js
+vitest.config.*
 
-# Compiled test/debug files (shouldn't ship to users)
-dist/**/*.test.*
-dist/**/test.*
-dist/**/quick-test.*
-dist/**/*-debug.*
-dist/**/inline-test.*
+## Config files
+tsconfig.json
+.github/
+.env*
+.eslintrc*
+.prettierrc*
 
-# Editor & System
-.vscode/
-.idea/
-.DS_Store
-*.swp
-
-# Logs & Temp
-*.log
-npm-debug.log*
-*.tmp
-*.temp
-
-# Build artifacts
-*.tgz
-
-# Secrets (Double safety)
-.env
-.env.*
+## Dev assets
+app-manifest.yml
+docker-compose.yml
+Dockerfile

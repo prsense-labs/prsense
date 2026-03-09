@@ -5,11 +5,18 @@
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import cors from 'cors'
-import { handleWebhook } from './github-bot.js'
+import { handleWebhook, getNotificationManager } from './github-bot.js'
 import { createPostgresStorage } from './storage/postgres.js'
 import { SQLiteStorage } from './storage/sqlite.js'
 import { InMemoryStorage } from './storage/memory.js'
 import type { StorageBackend } from './storage/interface.js'
+import { ImpactScorer } from './impactScore.js'
+import { PRTriageClassifier } from './triage.js'
+import { RulesEngine } from './rules.js'
+import { getKnowledgeGraph } from './github-bot.js'
+import { DescriptionGenerator } from './descriptionGenerator.js'
+import { getDetector } from './github-bot.js' // We need this to get similar PRs
+import { StalePRDetector } from './stalePR.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -35,7 +42,7 @@ async function initStorage() {
                 console.log('✅ Using SQLite storage')
             } catch (sqliteError: any) {
                 // Check if it's a missing dependency error
-                if (sqliteError?.message?.includes('better-sqlite3') || 
+                if (sqliteError?.message?.includes('better-sqlite3') ||
                     sqliteError?.message?.includes('Cannot find package')) {
                     console.warn('⚠️  SQLite not available (better-sqlite3 not installed)')
                     console.log('📦 Falling back to InMemoryStorage')
@@ -103,11 +110,163 @@ app.post('/webhook', async (req, res) => {
         if (!storage) {
             await initStorage()
         }
-        const result = await handleWebhook(req.body)
+        const result = await handleWebhook(
+            req.body,
+            req.headers as Record<string, string>,
+            (req.query.provider as any) || 'github'
+        )
         res.status(result.status).send(result.body)
     } catch (error) {
         console.error('Webhook error:', error)
         res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// v1.1.0: Impact Score endpoint
+app.post('/api/impact', async (req, res) => {
+    try {
+        const scorer = new ImpactScorer()
+        const result = scorer.score(req.body)
+        res.json(result)
+    } catch (error) {
+        console.error('Impact score error:', error)
+        res.status(400).json({ error: 'Invalid input' })
+    }
+})
+
+// v1.1.0: Triage endpoint
+app.post('/api/triage', async (req, res) => {
+    try {
+        const classifier = new PRTriageClassifier()
+        const result = await classifier.classify(req.body)
+        res.json(result)
+    } catch (error) {
+        console.error('Triage error:', error)
+        res.status(400).json({ error: 'Invalid input' })
+    }
+})
+
+// v1.1.0: Rules Evaluation endpoint
+app.post('/api/rules/evaluate', async (req, res) => {
+    try {
+        // Evaluate inputs using empty rules engine to test logic or populated instance if global config exists
+        const rulesEngine = new RulesEngine(req.body.rules || [])
+        const violations = rulesEngine.evaluate(req.body.input)
+        res.json({ violations })
+    } catch (error) {
+        console.error('Rules error:', error)
+        res.status(400).json({ error: 'Invalid input' })
+    }
+})
+
+// v1.1.0: Knowledge Graph Query
+app.get('/api/graph/query', async (req, res) => {
+    try {
+        const { id, type, relation } = req.query
+        if (!id || typeof id !== 'string') {
+            return res.status(400).json({ error: 'Node ID is required' })
+        }
+
+        const kg = await getKnowledgeGraph()
+        const results = kg.query(
+            id,
+            type as any,
+            relation as any
+        )
+        res.json(results)
+    } catch (error) {
+        console.error('Graph query error:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// v1.1.0: Knowledge Graph History
+app.get('/api/graph/history', async (req, res) => {
+    try {
+        const { file, author } = req.query
+        const kg = await getKnowledgeGraph()
+
+        if (file && typeof file === 'string') {
+            return res.json(kg.getFileHistory(file))
+        } else if (author && typeof author === 'string') {
+            return res.json(kg.getAuthorHistory(author))
+        }
+
+        res.status(400).json({ error: 'Either file or author must be provided' })
+    } catch (error) {
+        console.error('Graph history error:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// v1.1.0: Generate PR Description endpoint
+app.post('/api/describe', async (req, res) => {
+    try {
+        const { title, diff, author, files } = req.body
+        if (!title || !diff || !author || !files || !Array.isArray(files)) {
+            return res.status(400).json({ error: 'Missing required PR metadata (title, diff, author, files[])' })
+        }
+
+        // Try to get a detector for historical context, if not initialized it will still work but without similar PRs
+        let detector = null
+        try {
+            const bot = require('./github-bot.js')
+            if (bot.getDetector) {
+                detector = await bot.getDetector()
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        const generator = new DescriptionGenerator(detector)
+        const description = await generator.generate({ title, diff, author, files })
+        res.json({ description })
+    } catch (error) {
+        console.error('Description generation error:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// v1.1.0: Detect Stale PRs endpoint
+app.post('/api/stale', (req, res) => {
+    try {
+        const { prs, config } = req.body
+        if (!prs || !Array.isArray(prs)) {
+            return res.status(400).json({ error: 'List of PRs required in body.prs' })
+        }
+
+        const detector = new StalePRDetector(config)
+        const results = detector.evaluate(prs)
+
+        res.json({ results })
+    } catch (error) {
+        console.error('Stale PR detection error:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// v1.1.0: Test notifications endpoint
+app.post('/api/notifications/test', async (req, res) => {
+    try {
+        const manager = getNotificationManager()
+        const results = await manager.testAll()
+        res.json({ results, notifierCount: manager.getNotifierCount() })
+    } catch (error) {
+        console.error('Notification test error:', error)
+        res.status(500).json({ error: 'Test failed' })
+    }
+})
+
+// v1.1.0: Trigger weekly digest endpoint
+app.post('/api/notifications/digest', async (req, res) => {
+    try {
+        const manager = getNotificationManager()
+        const digest = req.body
+        await manager.sendWeeklyDigest(digest)
+        res.json({ status: 'sent' })
+    } catch (error) {
+        console.error('Digest error:', error)
+        res.status(500).json({ error: 'Failed to send digest' })
     }
 })
 

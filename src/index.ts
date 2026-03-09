@@ -25,5 +25,25 @@ export * from './embeddingCache.js'
 export * from './crossRepo.js'
 export * from './validation.js'
 export * from './errors.js'
-// Note: server.ts is intentionally NOT exported here.
-// Import directly from 'prsense/dist/src/server.js' if you need the Express server.
+export * from './triage.js'
+export * from './impactScore.js'
+export * from './rules.js'
+export * from './knowledgeGraph.js'
+export * from './descriptionGenerator.js'
+export * from './stalePR.js'
+export * from './notifications/index.js'
+// Re-export providers (excluding PRMetadata which conflicts with ./types.ts)
+export {
+    type PRFiles,
+    type GitProvider,
+    type ProviderConfig,
+    type ProviderType,
+    ProviderError,
+    createProvider,
+    GitHubProvider,
+    GitLabProvider,
+    BitbucketProvider,
+} from './providers/index.js'
+export type { PRMetadata as ProviderPRMetadata } from './providers/index.js'
+// Note: server.ts and github-bot.ts are intentionally NOT exported from root.
+// Import them via 'prsense/server' and 'prsense/bot' sub-paths.

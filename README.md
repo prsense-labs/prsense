@@ -47,6 +47,11 @@
 - **Dry-Run Mode** — specific testing without indexing
 - **ONNX Local Embeddings** — 100% offline, privacy-first
 - **Cross-Repo Detection** — Find duplicates across your entire org
+- **Custom Rules Engine** — Programmable PR blocking and warning rules
+- **Knowledge Graph** — Complete historical file and author relationship mappings
+- **AI PR Descriptions** — Auto-generated descriptions based on local semantic history
+- **Stale PR Detection** — Identify inactive PRs natively
+- **Multi-Provider Support** — GitHub, GitLab, and Bitbucket out of the box 
 
 📖 **See [Features Documentation](docs/features.md) for details.**
 

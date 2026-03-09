@@ -71,3 +71,25 @@ Fine-tune the system for your specific needs.
 ### 11. Dry-Run Mode
 *   **What it does**: Simulate detection without saving to the database.
 *   **Why it matters**: Safely test configuration changes in CI/CD before deploying.
+
+---
+
+## Layer 4: Application & Workflows (New in v1.1.0)
+
+Built on top of the Repository Memory, v1.1.0 introduces powerful new workflows.
+
+### 12. Knowledge Graph
+*   **What it does**: Maps the relationships between Authors, Files, and PRs over time.
+*   **Why it matters**: Allows you to instantly query "Who owns this file?" or "What parts of the codebase does this author usually touch?" without scraping git blames.
+
+### 13. AI-Powered PR Descriptions (Local Context)
+*   **What it does**: Auto-generates PR descriptions based on Diff heuristics and *local* embedded search of similar historical PRs.
+*   **Why it matters**: Better descriptions without sending your proprietary code to a 3rd party LLM.
+
+### 14. Custom Rules Engine
+*   **What it does**: Allows defining YAML/JSON rules to block or warn on PRs (e.g. `require security team review for auth/*`).
+*   **Why it matters**: Moves from "detection" to "enforcement" natively in the PR lifecycle.
+
+### 15. Stale PR Detection
+*   **What it does**: Automatically flags inactive PRs based on customizable thresholds.
+*   **Why it matters**: Keeps the repository clean and ensures reviews don't slip through the cracks.

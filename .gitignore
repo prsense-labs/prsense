@@ -43,5 +43,9 @@ test-results/
 *.tgz
 .cache/
 
+# Security — Private Keys
+*.pem
+*.key
 
+# Internal docs
 docs/infrastructure/

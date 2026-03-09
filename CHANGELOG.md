@@ -5,6 +5,16 @@ All notable changes to PRSense will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-09
+
+### Added
+- **Custom Rules Engine**: Programmable checks running locally without LLMs to block or warn on PRs automatically.
+- **Provider Abstraction**: Extracted GitHub logic and added full support for GitLab and Bitbucket.
+- **Knowledge Graph**: Ingests files and authors over time, building an explorable relationship graph to query the history of files and authors.
+- **AI-Powered PR Descriptions**: Generates descriptions programmatically by fetching contextually similar historical PRs locally via embeddings.
+- **Stale PR Detection**: Flags old and inactive PRs based on customizable thresholds and suggests actions (close, merge, ping reviewers).
+- **Express API Endpoint Expansion**: Added `/api/rules/evaluate`, `/api/graph/query`, `/api/graph/history`, `/api/describe`, and `/api/stale`.
+
 ## [1.0.2] - 2026-02-27
 
 ### Added
@@ -85,5 +95,8 @@ We believe this project is more than a linter. It is the missing state layer for
 - Web demo at prsense.dev
 - PRSense Analytics Dashboard  
 
+[1.1.0]: https://github.com/prsense-labs/prsense/releases/tag/v1.1.0
 [1.0.2]: https://github.com/prsense-labs/prsense/releases/tag/v1.0.2
-[Unreleased]: https://github.com/prsense-labs/prsense/compare/v1.0.2...HEAD
+[1.0.1]: https://github.com/prsense-labs/prsense/releases/tag/v1.0.1
+[1.0.0]: https://github.com/prsense-labs/prsense/releases/tag/v1.0.0
+[Unreleased]: https://github.com/prsense-labs/prsense/compare/v1.1.0...HEAD

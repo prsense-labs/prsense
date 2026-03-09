@@ -90,3 +90,160 @@ const detector = new PRSenseDetector({
 ```
 
 When connected to Postgres with `pgvector`, the `search()` and duplicate detection will automatically use database-side vector search for scalability.
+
+---
+
+## REST API Endpoints (v1.1.0)
+
+PRSense ships an Express server (`prsense/server`) with the following endpoints. Start it with `npm start`.
+
+### `POST /api/rules/evaluate`
+
+Evaluates a set of custom rules against a PR's changed files.
+
+**Request Body:**
+
+```json
+{
+  "files": ["src/auth/login.ts", "src/utils/hash.ts"],
+  "linesAdded": 120,
+  "linesRemoved": 30,
+  "author": "sarahdev"
+}
+```
+
+**Response:** `RuleViolation[]`
+
+```json
+[
+  { "ruleId": "security-auth-review", "description": "Changes to auth require security review", "action": "require-review" }
+]
+```
+
+### `GET /api/graph/query?startId=author:sarahdev&targetType=pr`
+
+Queries the Knowledge Graph for nodes related to a given entity.
+
+**Query Params:**
+- `startId` — Node ID (e.g. `author:sarahdev`, `file:src/auth.ts`, `pr:342`)
+- `targetType` — (Optional) Filter by `pr`, `file`, or `author`
+- `relation` — (Optional) Filter by `authored`, `touches`, `duplicate_of`, `related_to`
+
+**Response:** `GraphNode[]`
+
+### `GET /api/graph/history?type=file&name=src/auth.ts`
+
+Shortcut to get file or author history from the graph.
+
+**Query Params:**
+- `type` — `file` or `author`
+- `name` — The file path or username
+
+**Response:** `GraphNode[]`
+
+### `POST /api/describe`
+
+Generates an AI-powered PR description using heuristics and historical context (no LLM required).
+
+**Request Body:**
+
+```json
+{
+  "title": "fix: resolve login race condition",
+  "diff": "--- a/src/auth.ts\n+++ b/src/auth.ts\n@@ ...",
+  "author": "mchen",
+  "files": ["src/auth.ts"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "description": "## Bug Fix\nResolves a race condition in the authentication flow...\n\n**Files changed:** src/auth.ts\n**Similar PRs:** #128, #342"
+}
+```
+
+### `POST /api/stale`
+
+Evaluates an array of PRs and returns staleness scores.
+
+**Request Body:**
+
+```json
+{
+  "prs": [
+    { "prId": 342, "title": "OAuth2 PKCE", "author": "sarahdev", "createdAt": "2025-12-01", "updatedAt": "2026-01-15" }
+  ],
+  "thresholds": { "daysInactive": 14 }
+}
+```
+
+**Response:** `StalePRResult[]`
+
+```json
+[
+  { "prId": 342, "title": "OAuth2 PKCE", "author": "sarahdev", "daysInactive": 47, "score": 92, "suggestedAction": "close" }
+]
+```
+
+---
+
+## Library Classes (v1.1.0)
+
+### `RulesEngine`
+
+```typescript
+import { RulesEngine } from 'prsense'
+
+const engine = new RulesEngine()
+engine.addRule({
+  id: 'block-auth-changes',
+  description: 'Auth changes require security review',
+  action: 'require-review',
+  condition: { type: 'path', pattern: '**/auth/**' }
+})
+
+const violations = engine.evaluate({
+  files: ['src/auth/login.ts'],
+  linesAdded: 50, linesRemoved: 10
+})
+```
+
+### `KnowledgeGraph`
+
+```typescript
+import { KnowledgeGraph } from 'prsense'
+
+const graph = new KnowledgeGraph()
+graph.addPR(342, 'OAuth2 PKCE', 'sarahdev', ['src/auth/oauth.ts'])
+
+const history = graph.getFileHistory('src/auth/oauth.ts')
+const authored = graph.getAuthorHistory('sarahdev')
+```
+
+### `DescriptionGenerator`
+
+```typescript
+import { DescriptionGenerator } from 'prsense'
+
+const generator = new DescriptionGenerator(detector)
+const description = await generator.generate({
+  title: 'fix: login race condition',
+  diff: diffString,
+  author: 'mchen',
+  files: ['src/auth.ts']
+})
+```
+
+### `StalePRDetector`
+
+```typescript
+import { StalePRDetector } from 'prsense'
+
+const detector = new StalePRDetector({ daysBeforeStale: 14 })
+const results = detector.evaluate([
+  { prId: 342, title: 'OAuth2 PKCE', author: 'sarahdev',
+    createdAt: '2025-12-01', updatedAt: '2026-01-15' }
+])
+```
