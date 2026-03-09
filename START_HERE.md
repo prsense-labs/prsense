@@ -45,6 +45,9 @@ npx prsense check --title "Fix login bug" --files "auth.ts"
 
 # Ask your codebase a question (Semantic Search)
 npx prsense search "how did we fix the login crash last year?"
+
+# Auto-generate a PR description from your current branch (v1.1.0)
+npx prsense describe
 ```
 
 > [!TIP]

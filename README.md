@@ -11,7 +11,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/prsense-labs/prsense?style=social)](https://github.com/prsense-labs/prsense/stargazers)
 [![npm version](https://img.shields.io/npm/v/prsense?color=blue)](https://www.npmjs.com/package/prsense)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-127%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-186%20passed-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Deploy to Vercel](https://img.shields.io/badge/deploy-vercel-black?logo=vercel&logoColor=white)](docs/deployment.md)
 ---
@@ -118,11 +118,13 @@ PRSense is built on a **Repository Memory** architecture with three key layers:
 ## Project Structure
 
 ```
-prsenses-labs/
+prsense-labs/
 ├── package.json                # Monorepo Root
-├── prsense/                   # Core Library & API
-│   ├── src/                    # Detection Logic
-│   └── action/                 # GitHub Action
+├── prsense/                    # Core Library (npm package)
+│   ├── src/                    # Detection Logic, Rules, Graph, Triage
+│   ├── bin/                    # CLI (prsense command)
+│   ├── action/                 # GitHub Action
+│   └── docs/                   # API Reference & Guides
 ├── prsense-vscode/             # VS Code Extension
 └── prsense-analytics/          # Analytics Dashboard
 ```
@@ -182,8 +184,8 @@ const result = await detector.check(prData)
 ### Simple API (Recommended)
 
 ```typescript
-import { PRSenseDetector, createPostgresStorage } from './prsense.js'
-import { createOpenAIEmbedder } from './embedders/openai.js'
+import { PRSenseDetector, createPostgresStorage } from 'prsense'
+import { createOpenAIEmbedder } from 'prsense'
 
 // 1. Initialize
 const storage = await createPostgresStorage().init()
@@ -266,4 +268,4 @@ MIT License
 
 ---
 
-**PRSense v1.0.2** — The Repository Memory Infrastructure. Because your codebase deserves a brain.
+**PRSense v1.1.0** — The Repository Memory Infrastructure. Because your codebase deserves a brain.

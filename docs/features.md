@@ -93,3 +93,23 @@ Built on top of the Repository Memory, v1.1.0 introduces powerful new workflows.
 ### 15. Stale PR Detection
 *   **What it does**: Automatically flags inactive PRs based on customizable thresholds.
 *   **Why it matters**: Keeps the repository clean and ensures reviews don't slip through the cracks.
+
+### 16. Smart Triage & Auto-Labeling
+*   **What it does**: Classifies incoming PRs into categories (bug, feature, refactor, docs, etc.) with confidence scores, and suggests reviewers based on file ownership history.
+*   **Why it matters**: Saves maintainers 5-10 minutes per PR on manual triage. Labels applied automatically via webhook.
+
+### 17. Impact Scoring
+*   **What it does**: Calculates a risk score (0-100) for each PR based on factors like files changed, lines modified, blast radius, and author experience.
+*   **Why it matters**: Surfaces high-risk PRs that need extra review, preventing production incidents.
+
+### 18. Multi-Provider Support
+*   **What it does**: Full provider abstraction supporting **GitHub**, **GitLab**, and **Bitbucket** out of the box.
+*   **Why it matters**: PRSense works wherever your team hosts code — not locked to GitHub.
+
+### 19. Notification System
+*   **What it does**: Sends real-time alerts to **Slack** and **Discord** when duplicates, high-risk PRs, or rule violations are detected.
+*   **Why it matters**: Teams get notified in their existing workflow tools, not just in GitHub comments.
+
+### 20. Zero-Click AI Descriptions
+*   **What it does**: When a PR is opened with an empty description, the webhook automatically generates one using the `DescriptionGenerator` and posts it as a comment.
+*   **Why it matters**: Every PR gets a meaningful description — no developer friction required.
