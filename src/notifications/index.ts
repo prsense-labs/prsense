@@ -56,6 +56,16 @@ export class NotificationManager {
     }
 
     /**
+     * Dispatch an active rule violation to all channels
+     */
+    async notifyRuleViolation(alert: import('./types.js').RuleViolationAlert): Promise<void> {
+        const results = await Promise.allSettled(
+            this.notifiers.map(n => n.notifyRuleViolation(alert))
+        )
+        this.logFailures('notifyRuleViolation', results)
+    }
+
+    /**
      * Send weekly digest to all channels
      */
     async sendWeeklyDigest(digest: WeeklyDigest): Promise<void> {

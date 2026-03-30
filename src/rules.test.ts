@@ -19,7 +19,7 @@ describe('RulesEngine', () => {
         const violations = engine.evaluate({ files: ['src/auth/login.ts'], linesAdded: 10, linesRemoved: 5 })
         expect(violations).toHaveLength(1)
         expect(violations[0]!.ruleId).toBe('auth-review')
-        expect(violations[0]!.action).toBe('require-review')
+        expect(violations[0]!.action.type).toBe('require-review')
     })
 
     it('should evaluate max files conditions', () => {
@@ -95,7 +95,46 @@ describe('RulesEngine', () => {
         expect(engine.evaluate({ files: ['main.ts', 'util.ts'], linesAdded: 400, linesRemoved: 200, author: 'experienced' })).toHaveLength(0)
 
         // Passes size ✓, Passes NOT test ✓, Passes OR (experienced, but > 20 files) ✓ -> VIOLATION
+        // Passes size ✓, Passes NOT test ✓, Passes OR (experienced, but > 20 files) ✓ -> VIOLATION
         const manyFiles = Array.from({ length: 21 }, (_, i) => `file${i}.ts`)
         expect(engine.evaluate({ files: manyFiles, linesAdded: 400, linesRemoved: 200, author: 'experienced' })).toHaveLength(1)
+    })
+
+    it('should evaluate impact-score and bus-factor conditions with active actions', () => {
+        const engine = new RulesEngine([
+            {
+                id: 'high-risk',
+                description: 'High impact change needs senior review',
+                action: { type: 'assign-reviewer', payload: 'senior-dev' },
+                condition: { type: 'impact-score', minScore: 80 }
+            },
+            {
+                id: 'low-bus-factor',
+                description: 'Code with low bus factor is being modified',
+                action: { type: 'notify-slack', payload: '#engineering-alerts' },
+                condition: { type: 'bus-factor', maxFactor: 1 }
+            }
+        ])
+
+        // Safe change: low impact, high bus factor
+        expect(engine.evaluate({
+            files: ['1.ts'], linesAdded: 10, linesRemoved: 5, impactScore: 20, lowestBusFactor: 5
+        })).toHaveLength(0)
+
+        // Danger change: high impact
+        const violations1 = engine.evaluate({
+            files: ['1.ts'], linesAdded: 10, linesRemoved: 5, impactScore: 85, lowestBusFactor: 5
+        })
+        expect(violations1).toHaveLength(1)
+        expect(violations1[0]!.action.type).toBe('assign-reviewer')
+        expect((violations1[0]!.action as any).payload).toBe('senior-dev')
+
+        // Danger change: low bus factor
+        const violations2 = engine.evaluate({
+            files: ['1.ts'], linesAdded: 10, linesRemoved: 5, impactScore: 20, lowestBusFactor: 1
+        })
+        expect(violations2).toHaveLength(1)
+        expect(violations2[0]!.action.type).toBe('notify-slack')
+        expect((violations2[0]!.action as any).payload).toBe('#engineering-alerts')
     })
 })

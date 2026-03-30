@@ -3,6 +3,7 @@
  */
 
 import express from 'express'
+// @ts-ignore - express-rate-limit is an optional peerDependency
 import rateLimit from 'express-rate-limit'
 import cors from 'cors'
 import { handleWebhook, getNotificationManager } from './github-bot.js'
@@ -17,6 +18,10 @@ import { getKnowledgeGraph } from './github-bot.js'
 import { DescriptionGenerator } from './descriptionGenerator.js'
 import { getDetector } from './github-bot.js' // We need this to get similar PRs
 import { StalePRDetector } from './stalePR.js'
+import { EmbeddingPipeline } from './embeddingPipeline.js'
+import { createOpenAIEmbedder } from './embedders/openai.js'
+import { OllamaProvider } from './llm/ollama.js'
+import { createRAGRouter } from './api/ragEndpoints.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -98,9 +103,54 @@ app.get('/api/stats', async (req, res) => {
         const stats = await storage.getAnalytics()
         res.json(stats)
     } catch (error) {
-        console.error('Failed to get stats:', error)
-        res.status(500).json({ error: 'Internal server error' })
+        console.error('API Error:', error)
+        res.status(500).json({ error: 'Failed to retrieve analytics data' })
     }
+})
+
+// v2.0 Knowledge Graph Visualizations
+app.get('/api/graph/topology', async (req, res) => {
+    try {
+        const { getKnowledgeGraph } = await import('./github-bot.js')
+        const kg = await getKnowledgeGraph()
+
+        // Export the raw nodes and edges for Cytoscape/Force Directed graph
+        const exportData = kg.export()
+        res.json(exportData)
+    } catch (error) {
+        console.error('API Error: Failed to fetch graph topology', error)
+        res.status(500).json({ error: 'Failed to retrieve graph data' })
+    }
+})
+
+// Setup RAG Endpoints
+let ragPipeline: EmbeddingPipeline | null = null
+let ragLLM: OllamaProvider | undefined = undefined
+
+app.use('/api/rag', (req, res, next) => {
+    if (!ragPipeline) {
+        if (process.env.OLLAMA_URL) {
+            ragLLM = new OllamaProvider({
+                baseUrl: process.env.OLLAMA_URL,
+                ...(process.env.OLLAMA_MODEL ? { model: process.env.OLLAMA_MODEL } : {}),
+                ...(process.env.OLLAMA_EMBEDDING_MODEL ? { embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL } : {})
+            })
+            ragPipeline = new EmbeddingPipeline(ragLLM)
+        } else {
+            // Instantiate the pipeline cleanly (this uses OpenAI by default, could be configurable to Local/ONNX)
+            ragPipeline = new EmbeddingPipeline(createOpenAIEmbedder())
+        }
+    }
+
+    // Dynamic initialization of storage
+    const getStorage = async () => {
+        if (!storage) await initStorage()
+        if (!storage) throw new Error('Storage failed to initialize')
+        return storage
+    }
+
+    const ragRouter = createRAGRouter(getStorage, ragPipeline, ragLLM)
+    ragRouter(req, res, next)
 })
 
 // Webhook endpoint
@@ -210,7 +260,7 @@ app.post('/api/describe', async (req, res) => {
         // Try to get a detector for historical context, if not initialized it will still work but without similar PRs
         let detector = null
         try {
-            const bot = require('./github-bot.js')
+            const bot = await import('./github-bot.js')
             if (bot.getDetector) {
                 detector = await bot.getDetector()
             }
@@ -218,7 +268,7 @@ app.post('/api/describe', async (req, res) => {
             // ignore
         }
 
-        const generator = new DescriptionGenerator(detector)
+        const generator = new DescriptionGenerator(detector || undefined)
         const description = await generator.generate({ title, diff, author, files })
         res.json({ description })
     } catch (error) {
@@ -241,6 +291,36 @@ app.post('/api/stale', (req, res) => {
         res.json({ results })
     } catch (error) {
         console.error('Stale PR detection error:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// v2.0: Search Architectural Decisions (EDM)
+app.post('/api/decisions/search', async (req, res) => {
+    try {
+        const { query, limit = 10 } = req.body
+        if (!query || typeof query !== 'string') {
+            return res.status(400).json({ error: 'Query string is required' })
+        }
+
+        if (!storage || !storage.searchDecisions) {
+            return res.status(501).json({ error: 'Decision search is only supported with Postgres storage' })
+        }
+
+        // We need the pipeline to embed the user's natural language query
+        const bot = await import('./github-bot.js')
+        const detector = await bot.getDetector()
+
+        // Generate embedding for the search query
+        const pipeline = (detector as any).pipeline
+        if (!pipeline) throw new Error('Embedding pipeline not found on detector')
+
+        const result = await pipeline.run(query, '', '')
+        const decisions = await storage.searchDecisions(result.textEmbedding, limit)
+
+        res.json({ decisions })
+    } catch (error) {
+        console.error('Decision search error:', error)
         res.status(500).json({ error: 'Internal server error' })
     }
 })

@@ -12,6 +12,7 @@ export interface PRMetadata {
     description: string
     createdAt: number
     mergedAt?: number
+    files?: string[]
 }
 
 /**

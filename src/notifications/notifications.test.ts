@@ -14,6 +14,7 @@ function createMockNotifier(): Notifier {
         notifyImpact: vi.fn().mockResolvedValue(undefined),
         sendWeeklyDigest: vi.fn().mockResolvedValue(undefined),
         testConnection: vi.fn().mockResolvedValue(true),
+        notifyRuleViolation: vi.fn().mockResolvedValue(undefined),
     }
 }
 

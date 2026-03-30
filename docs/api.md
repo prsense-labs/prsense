@@ -93,7 +93,7 @@ When connected to Postgres with `pgvector`, the `search()` and duplicate detecti
 
 ---
 
-## REST API Endpoints (v1.1.0)
+## REST API Endpoints
 
 PRSense ships an Express server (`prsense/server`) with the following endpoints. Start it with `npm start`.
 
@@ -189,7 +189,31 @@ Evaluates an array of PRs and returns staleness scores.
 
 ---
 
-## Library Classes (v1.1.0)
+## Webhook Endpoints (v2.0.0)
+
+v2.0.0 adds dedicated webhook routes for GitLab and Bitbucket alongside the existing GitHub webhook.
+
+### `POST /api/webhook` (GitHub)
+
+Receives GitHub App webhook events (`pull_request`, `installation`, `installation_repositories`, `ping`). Verifies signature via `X-Hub-Signature-256`.
+
+### `POST /api/webhook/gitlab`
+
+Receives GitLab `Merge Request Hook` events. Verifies via `X-Gitlab-Token` header against `GITLAB_WEBHOOK_SECRET`.
+
+**Processed Actions:** `open`, `update`, `reopen`
+
+### `POST /api/webhook/bitbucket`
+
+Receives Bitbucket Cloud webhook events via `X-Event-Key` header.
+
+**Processed Events:** `pullrequest:created`, `pullrequest:updated`
+
+All three webhook routes run the same detection pipeline → store results → dispatch Slack/Discord notifications.
+
+---
+
+## Library Classes
 
 ### `RulesEngine`
 

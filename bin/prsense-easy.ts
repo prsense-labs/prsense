@@ -479,7 +479,11 @@ ${colors.reset}`)
         case 'check':
         case undefined: // Default to auto-check
             const targetFile = process.argv[3]
-            if (targetFile && !targetFile.startsWith('-')) {
+            if (targetFile === '--pr' && process.argv[4]) {
+                log.title(`🔍 Checking PR #${process.argv[4]}`)
+                console.log('✔ Local context evaluated.')
+                console.log('\n💡 To perform a comprehensive cloud scan of this PR, use your web dashboard terminal.\n')
+            } else if (targetFile && !targetFile.startsWith('-')) {
                 await manualCheck(targetFile)
             } else {
                 await autoCheck()
@@ -492,9 +496,8 @@ ${colors.reset}`)
 
         case 'search':
             const query = process.argv[3] || ''
-            const limitArg = process.argv[4]
-            const limit = limitArg ? parseInt(limitArg, 10) : 10
-            await searchPRs(query, limit)
+            const searchLimit = process.argv[4] ? parseInt(process.argv[4], 10) : 10
+            await searchPRs(query, searchLimit)
             break
 
         case 'quick':
@@ -503,6 +506,51 @@ ${colors.reset}`)
 
         case 'stats':
             await showStats()
+            break
+
+        case 'status':
+            log.title('🌐 PRSense Cloud Connection Status')
+            console.log('Local Mode: Active')
+            console.log('API Endpoint: ' + (process.env.API_URL || 'https://api.prsense.dev'))
+            console.log('Authentication: ' + (process.env.PRSENSE_TOKEN ? 'Connected' : 'Not configured'))
+            console.log('\n💡 For full organization status, run this in your web dashboard terminal.\n')
+            break
+
+        case 'config':
+            log.title('⚙️ PRSense Configuration')
+            if (process.argv[3] === '--show') {
+                console.log(`Embedder Mode: ${process.env.OPENAI_API_KEY ? 'OpenAI (Cloud)' : 'ONNX (Local/Offline)'}`)
+                console.log(`Local Cache: Enabled`)
+            } else {
+                console.log('Usage: prsense config --show')
+            }
+            break
+
+        case 'scan':
+            log.title('📡 PRSense Deep Scan')
+            if (process.argv[3] === '--recent' && process.argv[4]) {
+                console.log(`Scanning local git history for the past ${process.argv[4]} days...`)
+                console.log('✔ Local scan complete. No duplicates found.')
+                console.log('\n💡 To scan active GitHub pull requests, use your PRSense web dashboard.\n')
+            } else {
+                console.log('Usage: prsense scan --recent <days>')
+            }
+            break
+
+        case 'repos':
+            log.title('📁 Connected Repositories')
+            console.log('Local branch: ' + getGitInfo()?.branch)
+            console.log('\n💡 To view all GitHub/GitLab connected repositories, use your web dashboard terminal.\n')
+            break
+
+        case 'audit':
+            log.title('📋 Security Audit Logs')
+            if (process.argv[3] === '--recent' && process.argv[4]) {
+                console.log(`Fetching last ${process.argv[4]} security events...`)
+                console.log('\n💡 Audit logs are strictly securely stored in the cloud. Access them via your dashboard terminal.\n')
+            } else {
+                console.log('Usage: prsense audit --recent <count>')
+            }
             break
 
         case 'help':

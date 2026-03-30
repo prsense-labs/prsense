@@ -13,9 +13,12 @@ import { ImpactScorer } from './impactScore.js'
 import { RulesEngine, type RuleDefinition, type RuleViolation } from './rules.js'
 import { KnowledgeGraph } from './knowledgeGraph.js'
 import { DescriptionGenerator } from './descriptionGenerator.js'
+import { OllamaProvider } from './llm/ollama.js'
 import { NotificationManager } from './notifications/index.js'
 import type { DuplicateAlert, ImpactAlert } from './notifications/index.js'
 import { createProvider, type GitProvider, type ProviderType } from './providers/index.js'
+import { LinearProvider } from './providers/linear.js'
+import { JiraProvider } from './providers/jira.js'
 
 // Cache providers to reduce redundant initializations
 const providers: Record<string, GitProvider> = {}
@@ -38,7 +41,17 @@ let storage: StorageBackend | null = null
 
 export async function getDetector(): Promise<PRSenseDetector> {
     if (!detector) {
-        const embedder = createOpenAIEmbedder()
+        let embedder
+        if (process.env.OLLAMA_URL) {
+            embedder = new OllamaProvider({
+                baseUrl: process.env.OLLAMA_URL,
+                ...(process.env.OLLAMA_MODEL ? { model: process.env.OLLAMA_MODEL } : {}),
+                ...(process.env.OLLAMA_EMBEDDING_MODEL ? { embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL } : {})
+            })
+            console.log('✅ Using Local Ollama Privacy Provider (disabled OpenAI)')
+        } else {
+            embedder = createOpenAIEmbedder()
+        }
 
         // Use Postgres in production, fallback to memory
         if (process.env.DATABASE_URL) {
@@ -129,6 +142,23 @@ export async function getKnowledgeGraph(): Promise<KnowledgeGraph> {
     return knowledgeGraph
 }
 
+// v2.0.0: External Ticket Providers (Phase 5)
+let linearProvider: LinearProvider | null = null
+export function getLinearProvider(): LinearProvider | null {
+    if (!linearProvider && process.env.LINEAR_API_KEY) {
+        linearProvider = new LinearProvider(process.env.LINEAR_API_KEY)
+    }
+    return linearProvider
+}
+
+let jiraProvider: JiraProvider | null = null
+export function getJiraProvider(): JiraProvider | null {
+    if (!jiraProvider && process.env.JIRA_URL && process.env.JIRA_EMAIL && process.env.JIRA_API_TOKEN) {
+        jiraProvider = new JiraProvider(process.env.JIRA_URL, process.env.JIRA_EMAIL, process.env.JIRA_API_TOKEN)
+    }
+    return jiraProvider
+}
+
 /**
  * Main generic webhook handler (supports GH, GitLab, Bitbucket)
  */
@@ -162,6 +192,36 @@ export async function handleWebhook(event: any, headers: Record<string, string>,
         // 3. Fetch PR content
         const changedFiles = await provider.fetchFiles(pr.id, pr.baseRepo)
         const diff = await provider.fetchDiff(pr.id, pr.baseRepo)
+
+        // v2.0.0: Enrich with External Context (Linear/Jira)
+        let enrichedDescription = pr.description || ''
+        const searchContext = `${pr.title} ${pr.description || ''}`
+
+        const linear = getLinearProvider()
+        if (linear) {
+            const linearIds = linear.extractIdentifiers(searchContext)
+            for (const id of linearIds) {
+                console.log(`[Linear] Fetching context for issue ${id}...`)
+                const issue = await linear.fetchIssueDetails(id)
+                if (issue) {
+                    enrichedDescription += `\n\n${linear.formatForContext(issue)}`
+                }
+            }
+        }
+
+        const jira = getJiraProvider()
+        if (jira) {
+            const jiraIds = jira.extractIdentifiers(searchContext)
+            for (const id of jiraIds) {
+                console.log(`[Jira] Fetching context for issue ${id}...`)
+                const issue = await jira.fetchIssueDetails(id)
+                if (issue) {
+                    enrichedDescription += `\n\n${jira.formatForContext(issue)}`
+                }
+            }
+        }
+
+        pr.description = enrichedDescription // Replace with enriched version for analysis
 
         // v1.2.0: AI Description Generation
         let generatedDescription = null
@@ -255,12 +315,23 @@ export async function handleWebhook(event: any, headers: Record<string, string>,
         }
 
         // v1.1.0: Suggest reviewers + handle 'require-review' actions from rules
-        let reviewersToRequest = triageResult.suggestedReviewers.map(r => r.author)
+        let reviewersToRequest = triageResult.suggestedReviewers.map((r: any) => r.author)
         // If a rule requires review, and security authors are configured, add them
-        const requiresSecurityReview = ruleViolations.some(v => v.action === 'require-review')
+        const requiresSecurityReview = ruleViolations.some(v => v.action.type === 'require-review')
         if (requiresSecurityReview && process.env.SECURITY_REVIEW_AUTHORS) {
             reviewersToRequest.push(...process.env.SECURITY_REVIEW_AUTHORS.split(','))
         }
+
+        // Handle specific assign-reviewers from rule actions
+        ruleViolations.forEach(v => {
+            if (v.action.type === 'assign-reviewer' && v.action.payload) {
+                if (Array.isArray(v.action.payload)) {
+                    reviewersToRequest.push(...v.action.payload)
+                } else if (typeof v.action.payload === 'string') {
+                    reviewersToRequest.push(v.action.payload)
+                }
+            }
+        })
 
         // Deduplicate and request
         reviewersToRequest = [...new Set(reviewersToRequest)]
@@ -268,10 +339,34 @@ export async function handleWebhook(event: any, headers: Record<string, string>,
             await provider.requestReviewers(pr.id, pr.baseRepo, reviewersToRequest)
         }
 
-        // Apply block/warn rule labels
-        const shouldBlock = ruleViolations.some(v => v.action === 'block')
-        if (shouldBlock) {
-            await provider.addLabel(pr.id, pr.baseRepo, 'do-not-merge') // Convention
+        // Apply block rules / apply-label actions
+        const labelsToApply = new Set<string>()
+        ruleViolations.forEach(v => {
+            if (v.action.type === 'block') {
+                labelsToApply.add('do-not-merge') // Convention
+            } else if (v.action.type === 'apply-label' && Array.isArray(v.action.payload)) {
+                v.action.payload.forEach(l => labelsToApply.add(l))
+            } else if (v.action.type === 'apply-label' && typeof v.action.payload === 'string') {
+                labelsToApply.add(v.action.payload)
+            }
+        })
+
+        for (const label of labelsToApply) {
+            await provider.addLabel(pr.id, pr.baseRepo, label)
+        }
+
+        // Notify specific Slack/Discord channels triggered by rules
+        for (const v of ruleViolations) {
+            if (v.action.type === 'notify-slack' || v.action.type === 'notify-discord') {
+                await notificationManager.notifyRuleViolation({
+                    prId: typeof pr.id === 'string' ? parseInt(pr.id, 10) : pr.id,
+                    prTitle: pr.title,
+                    prUrl: pr.url,
+                    ruleId: v.ruleId,
+                    description: v.description,
+                    action: v.action
+                })
+            }
         }
 
         // v1.1.0: Send notifications
@@ -337,13 +432,13 @@ function formatComment(
     // v1.1.0: Rules section
     let rulesSection = ''
     if (ruleViolations.length > 0) {
-        const blocks = ruleViolations.filter(v => v.action === 'block')
-        const warns = ruleViolations.filter(v => v.action !== 'block')
+        const blocks = ruleViolations.filter(v => v.action.type === 'block')
+        const warns = ruleViolations.filter(v => v.action.type !== 'block')
         if (blocks.length > 0) {
             rulesSection += `\n### 🛑 Policy Violations (Do Not Merge)\n${blocks.map(b => `- **[${b.ruleId}]** ${b.description}`).join('\n')}\n`
         }
         if (warns.length > 0) {
-            rulesSection += `\n### ⚠️ Policy Warnings\n${warns.map(w => `- **[${w.ruleId}]** ${w.description}`).join('\n')}\n`
+            rulesSection += `\n### ⚠️ Policy Warnings / Actions Taken\n${warns.map(w => `- **[${w.ruleId}]** ${w.description} (\`${w.action.type}\`)`).join('\n')}\n`
         }
     }
 

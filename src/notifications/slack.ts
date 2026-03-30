@@ -139,6 +139,56 @@ export class SlackNotifier implements Notifier {
         await this.send({ blocks })
     }
 
+    async notifyRuleViolation(alert: import('./types.js').RuleViolationAlert): Promise<void> {
+        let actionDescription = alert.action.type.toUpperCase()
+        if (alert.action.payload) {
+            const payloadStr = Array.isArray(alert.action.payload) ? alert.action.payload.join(', ') : alert.action.payload
+            actionDescription += ` (${payloadStr})`
+        }
+
+        const blocks = [
+            {
+                type: 'header',
+                text: {
+                    type: 'plain_text',
+                    text: `🚨 Workflow Rule Triggered`,
+                    emoji: true,
+                },
+            },
+            {
+                type: 'section',
+                fields: [
+                    {
+                        type: 'mrkdwn',
+                        text: `*PR:*\n<${alert.prUrl || '#'}|#${alert.prId} — ${alert.prTitle}>`,
+                    },
+                    {
+                        type: 'mrkdwn',
+                        text: `*Rule:*\n${alert.ruleId}`,
+                    },
+                ],
+            },
+            {
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: `*Reason:*\n${alert.description}\n\n*Action Taken:*\n\`${actionDescription}\``,
+                },
+            },
+            {
+                type: 'context',
+                elements: [
+                    {
+                        type: 'mrkdwn',
+                        text: '⚡ Powered by <https://github.com/prsense-labs/prsense|PRSense> AI Workflow Intelligence',
+                    },
+                ],
+            },
+        ]
+
+        await this.send({ blocks, attachments: [{ color: '#e74c3c', blocks: [] }] })
+    }
+
     async sendWeeklyDigest(digest: WeeklyDigest): Promise<void> {
         const blocks = [
             {

@@ -99,6 +99,25 @@ export class GitHubProvider implements GitProvider {
         await this.post(url, { body })
     }
 
+    async fetchComments(prId: number | string, repo: string): Promise<import('../edm/comments.js').PRComment[]> {
+        const url = `${this.baseUrl}/repos/${repo}/issues/${prId}/comments`
+        try {
+            const response = await fetch(url, { headers: this.getHeaders() })
+            if (!response.ok) return []
+
+            const comments = await response.json() as any[]
+            return comments.map(c => ({
+                id: c.id.toString(),
+                author: c.user?.login || 'unknown',
+                body: c.body || '',
+                createdAt: c.created_at,
+                url: c.html_url
+            }))
+        } catch {
+            return []
+        }
+    }
+
     async addLabel(prId: number | string, repo: string, label: string): Promise<void> {
         const url = `${this.baseUrl}/repos/${repo}/issues/${prId}/labels`
         await this.post(url, { labels: [label] })

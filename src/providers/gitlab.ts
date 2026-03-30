@@ -83,6 +83,29 @@ export class GitLabProvider implements GitProvider {
         await this.post(url, { body })
     }
 
+    async fetchComments(prId: number | string, repo: string): Promise<import('../edm/comments.js').PRComment[]> {
+        const projectId = encodeURIComponent(repo)
+        const url = `${this.baseUrl}/projects/${projectId}/merge_requests/${prId}/notes`
+        try {
+            const response = await fetch(url, { headers: this.getHeaders() })
+            if (!response.ok) return []
+
+            const comments = await response.json() as any[]
+            return comments
+                // Filter out system notes (like "merged this merge request")
+                .filter(c => !c.system)
+                .map(c => ({
+                    id: c.id.toString(),
+                    author: c.author?.username || 'unknown',
+                    body: c.body || '',
+                    createdAt: c.created_at,
+                    url: '' // GitLab API doesn't return direct note URLs in the basic list often
+                }))
+        } catch {
+            return []
+        }
+    }
+
     async addLabel(prId: number | string, repo: string, label: string): Promise<void> {
         const projectId = encodeURIComponent(repo)
         const url = `${this.baseUrl}/projects/${projectId}/merge_requests/${prId}`

@@ -75,6 +75,25 @@ export class BitbucketProvider implements GitProvider {
         await this.post(url, { content: { raw: body } })
     }
 
+    async fetchComments(prId: number | string, repo: string): Promise<import('../edm/comments.js').PRComment[]> {
+        const url = `${this.baseUrl}/repositories/${repo}/pullrequests/${prId}/comments`
+        try {
+            const response = await fetch(url, { headers: this.getHeaders() })
+            if (!response.ok) return []
+
+            const data = await response.json() as any
+            return (data.values || []).map((c: any) => ({
+                id: c.id.toString(),
+                author: c.user?.display_name || c.user?.nickname || 'unknown',
+                body: c.content?.raw || '',
+                createdAt: c.created_on,
+                url: c.links?.html?.href || ''
+            }))
+        } catch {
+            return []
+        }
+    }
+
     async addLabel(prId: number | string, repo: string, label: string): Promise<void> {
         // Bitbucket doesn't have native PR labels in the same way GitHub/GitLab do
         // Some apps add tags, but natively we'd prepend to the title as a fallback

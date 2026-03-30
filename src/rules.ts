@@ -9,12 +9,18 @@ import { minimatch } from 'minimatch'
 
 // ─── Types ───────────────────────────────────────────────────────
 
-export type RuleAction = 'block' | 'warn' | 'require-review'
+export type RuleActionType = 'block' | 'warn' | 'require-review' | 'assign-reviewer' | 'notify-slack' | 'notify-discord' | 'apply-label'
+
+export interface RuleAction {
+    type: RuleActionType
+    // Optional payload depending on the action type
+    payload?: string | string[] // e.g. username for assign, label name, or slack channel
+}
 
 export interface RuleDefinition {
     id: string
     description: string
-    action: RuleAction
+    action: RuleAction | RuleActionType // Support legacy string actions
     condition: RuleCondition
 }
 
@@ -23,6 +29,8 @@ export type RuleCondition =
     | MaxFilesCondition
     | MaxDiffSizeCondition
     | AuthorCondition
+    | ImpactScoreCondition
+    | BusFactorCondition
     | AndCondition
     | OrCondition
     | NotCondition
@@ -47,6 +55,16 @@ export interface AuthorCondition {
     authors: string[]
 }
 
+export interface ImpactScoreCondition {
+    type: 'impact-score'
+    minScore: number // Trigger if impact is >= this
+}
+
+export interface BusFactorCondition {
+    type: 'bus-factor'
+    maxFactor: number // Trigger if bus factor is <= this (i.e. very few people know this code)
+}
+
 export interface AndCondition {
     type: 'and'
     conditions: RuleCondition[]
@@ -67,6 +85,8 @@ export interface RuleInput {
     linesAdded: number
     linesRemoved: number
     author?: string
+    impactScore?: number
+    lowestBusFactor?: number
 }
 
 export interface RuleViolation {
@@ -101,10 +121,15 @@ export class RulesEngine {
 
         for (const rule of this.rules) {
             if (this.evaluateCondition(rule.condition, input)) {
+                // Normalize legacy string actions to the new object format
+                const actionObj: RuleAction = typeof rule.action === 'string'
+                    ? { type: rule.action as RuleActionType }
+                    : rule.action
+
                 violations.push({
                     ruleId: rule.id,
                     description: rule.description,
-                    action: rule.action,
+                    action: actionObj,
                 })
             }
         }
@@ -126,6 +151,14 @@ export class RulesEngine {
             case 'author-in':
                 if (!input.author) return false
                 return condition.authors.includes(input.author)
+
+            case 'impact-score':
+                if (input.impactScore === undefined) return false
+                return input.impactScore >= condition.minScore
+
+            case 'bus-factor':
+                if (input.lowestBusFactor === undefined) return false
+                return input.lowestBusFactor <= condition.maxFactor
 
             case 'and':
                 if (condition.conditions.length === 0) return true

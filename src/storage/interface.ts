@@ -48,6 +48,26 @@ export interface StorageBackend {
     getAnalytics(): Promise<AnalyticsData>
 
     /**
+     * Save an architectural decision extracted from PR comments (EDM)
+     */
+    saveDecision?(decision: import('../edm/comments.js').ArchitecturalDecision): Promise<void>
+
+    /**
+     * Search architectural decisions
+     */
+    searchDecisions?(queryEmbedding: Float32Array, limit: number): Promise<import('../edm/comments.js').ArchitecturalDecision[]>
+
+    /**
+     * Save a codebase text chunk (for RAG)
+     */
+    saveChunk?(chunk: import('../rag/astChunker.js').CodeChunk & { embedding: Float32Array }): Promise<void>
+
+    /**
+     * Search codebase chunks (for RAG)
+     */
+    searchChunks?(queryEmbedding: Float32Array, limit: number): Promise<Array<import('../rag/astChunker.js').CodeChunk & { embedding: Float32Array, score: number }>>
+
+    /**
      * Get a PR by ID
      */
     get(prId: number): Promise<PRRecord | null>

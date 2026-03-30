@@ -47,6 +47,9 @@ export interface GitProvider {
 
     /** Request specific reviewers for the PR */
     requestReviewers(prId: number | string, repo: string, reviewers: string[]): Promise<void>
+
+    /** Fetch all comments and review discussions from the PR */
+    fetchComments?(prId: number | string, repo: string): Promise<import('../edm/comments.js').PRComment[]>
 }
 
 export interface ProviderConfig {

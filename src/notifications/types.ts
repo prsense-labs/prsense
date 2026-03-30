@@ -18,6 +18,15 @@ export interface ImpactAlert {
     factors: Array<{ name: string; score: number; description: string }>
 }
 
+export interface RuleViolationAlert {
+    prId: number
+    prTitle: string
+    prUrl?: string
+    ruleId: string
+    description: string
+    action: import('../rules.js').RuleAction
+}
+
 export interface WeeklyDigest {
     weekStart: string
     weekEnd: string
@@ -31,6 +40,7 @@ export interface WeeklyDigest {
 export interface Notifier {
     notifyDuplicate(alert: DuplicateAlert): Promise<void>
     notifyImpact(alert: ImpactAlert): Promise<void>
+    notifyRuleViolation(alert: RuleViolationAlert): Promise<void>
     sendWeeklyDigest(digest: WeeklyDigest): Promise<void>
     testConnection(): Promise<boolean>
 }

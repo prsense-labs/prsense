@@ -1,56 +1,67 @@
-# 🚀 PRSense Roadmap: The Future of Duplicate Detection
+# 🚀 PRSense Roadmap: The System of Record for Engineering Intelligence
 
-We are building the smartest, fastest, and most privacy-focused duplicate detection engine. Here is what's coming next.
+PRSense started as a tool to find duplicate Pull Requests. 
 
-## ✅ Recently Completed Features
+With v1.1.0, it became **Repository Memory**—indexing PRs, files, and authors. 
 
-### 🌟 Local Embeddings (Feature 7) ✅ COMPLETE
-**Status**: ✅ Implemented
-**Goal**: Make PRSense **100% Free & Private**.
-- **No OpenAI Key Required**: Run entirely on your machine or CI runner.
-- **Privacy First**: Your code never leaves your environment.
-- **Zero Cost**: No API bills, ever.
-- **Tech**: Powered by ONNX Runtime and quantized models (e.g., `all-MiniLM-L6-v2`).
-- **Implementation**: `src/embedders/onnx.ts` with fallback support
+With **v2.0.0**, it became **Multi-Provider Infrastructure**—supporting GitHub, GitLab, and Bitbucket with real-time webhook processing, BYOK, and organizational API management.
 
-### 🌐 Cross-Repository Detection (Feature 8) ✅ COMPLETE
-**Status**: ✅ Implemented
-**Goal**: Find duplicates across your entire organization.
-- Detect if a feature in `frontend-repo` duplicates logic in `mobile-repo`.
-- Unified vector index for all organization code.
-- **Implementation**: `src/crossRepo.ts` with `CrossRepoDetector` class
-
-### 📊 Additional Completed Features
-- ✅ **Feature 1**: SQLite/Postgres storage exports
-- ✅ **Feature 2**: Score breakdown/explainability (`checkDetailed` method)
-- ✅ **Feature 3**: Batch check API (`checkMany` method)
-- ✅ **Feature 4**: Embedding caching (LRU cache for cost savings)
-- ✅ **Feature 5**: Configurable weights (`setWeights` method)
-- ✅ **Feature 6**: Dry-run mode (test without indexing)
-
-## 🔮 Future Capabilities (v1.1+)
-
-### 1. 🧠 Temporal Modeling
-**Goal**: Account for time decay in duplication.
-- PRs from 2 years ago are less likely to be relevant duplicates.
-- **Method**: Introduce time-decay factor `$e^{-\lambda t}$` into scoring.
-
-### 2. 🕸️ Graph Neural Networks (GNN)
-**Goal**: Model dependency relationships.
-- Go beyond text/diff similarity.
-- Model file import graphs to detect "structural duplicates" (different code, same dependencies).
-
-### 3. � Active Learning
-**Goal**: Learn from user feedback.
-- If a user marks "Not a Duplicate", update weights automatically.
-- Personalized tuning for each repository.
-
-### 4. 📊 Analytics Dashboard
-**Goal**: Visualize wasted effort.
-- "You saved 40 hours of dev time this month by catching 5 duplicate PRs."
-- Leaderboard of "Most Original Contributors".
+For **v3.0**, our vision is the **Self-Evolving Codebase Engine** — a repository that improves itself automatically.
 
 ---
 
-## 🤝 Want to help?
-We are looking for contributors! Check out [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+## ✅ Shipped in v2.0.0
+
+- ✅ **Full GitLab & Bitbucket Webhook Processing** — Real MR/PR duplicate detection across all three platforms.
+- ✅ **GitLab Service & Bitbucket Service** — Dedicated API clients for fetching details, posting comments, listing projects.
+- ✅ **Cross-Repo Radar** — Detect duplicates across an entire org's repositories.
+- ✅ **Webhook Alerts** — Slack/Discord notifications for detected duplicates.
+- ✅ **BYOK (Bring Your Own Key)** — Users supply their own OpenAI keys.
+- ✅ **API Key Management** — Organization-scoped key creation, listing, and revocation.
+- ✅ **Webhook Management** — CRUD endpoints for notification webhook configuration.
+- ✅ **Production Auth** — Dev mode bypasses removed, production-only OAuth flow.
+
+---
+
+## 🔮 The v3.0 Vision: Self-Evolving Codebase Engine
+
+### Phase 1: Code Intelligence (v2.1.0)
+*   **AST Parsing**: Parse TypeScript/JavaScript code using Tree-sitter to understand structure, not just text.
+*   **Code Health Score**: Dashboard page showing repository health metrics — dead code, duplicate logic blocks, circular imports, complexity hotspots.
+*   **Style Learning**: Analyze naming conventions, architecture patterns, error handling to build a "Codebase Style Profile" per repository.
+
+### Phase 2: Refactor Engine (v2.2.0)
+*   **Safe Refactors**: Generate provably safe transformations — remove dead code, extract duplicated logic, flag outdated dependencies.
+*   **Dry-Run Mode**: Show what the engine *would* change before opening any PRs.
+*   **Auto-PRs**: Automatically open refactoring PRs on GitHub, GitLab, and Bitbucket with detailed explanations.
+
+### Phase 3: Full Autonomy (v3.0.0)
+*   **Learning Loop**: If user merges a suggested PR → boost confidence. If user closes → learn to avoid.
+*   **Complex Refactors**: Rename variables, replace algorithms, restructure modules.
+*   **Scheduled Scans**: Weekly, per-commit, or on-demand codebase analysis.
+
+---
+
+## 🧠 Beyond v3.0
+
+### Engineering Decision Memory (EDM)
+Ingest **PR Comments**, **Code Review Discussions**, and integrate with **Slack**, **Discord**, and **Linear** so PRSense can answer "Why did we choose Postgres over MySQL?" by extracting the exact comment from a closed PR discussion.
+
+### Universal Knowledge Graph
+Build an advanced recursive graph linking: `Author` → `PR` → `File` → `Function` → `Issue` → `Slack Thread` to compute **Bus Factor** and **True Expertise**.
+
+### Cross-Platform Omnipresence
+Expand ingestion to **Jira**, **Linear**, **Notion**, and chat tools. A developer types `/prsense why did this breaking change happen?` in Slack and gets a complete answer.
+
+### Codebase RAG (Chat Interface)
+Full Retrieval-Augmented Generation — embed the entire codebase alongside PR history for a natural language chat interface.
+
+### Enterprise Privacy (Local LLMs)
+Add `OllamaProvider` for `DescriptionGenerator` and `Smart Triage` — enabling 100% air-gapped AI code review for banks, healthcare, and defense.
+
+---
+
+## 🤝 The Future is Open
+We are building this in the open because developers deserve tools that understand them.
+If you want to help us build the "Second Brain" for engineering teams, check out [CONTRIBUTING.md](CONTRIBUTING.md).
+

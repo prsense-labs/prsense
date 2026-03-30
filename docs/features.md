@@ -74,9 +74,9 @@ Fine-tune the system for your specific needs.
 
 ---
 
-## Layer 4: Application & Workflows (New in v1.1.0)
+## Layer 4: Application & Workflows (v1.1.0+)
 
-Built on top of the Repository Memory, v1.1.0 introduces powerful new workflows.
+Built on top of the Repository Memory, these workflows automate engineering intelligence.
 
 ### 12. Knowledge Graph
 *   **What it does**: Maps the relationships between Authors, Files, and PRs over time.
@@ -113,3 +113,30 @@ Built on top of the Repository Memory, v1.1.0 introduces powerful new workflows.
 ### 20. Zero-Click AI Descriptions
 *   **What it does**: When a PR is opened with an empty description, the webhook automatically generates one using the `DescriptionGenerator` and posts it as a comment.
 *   **Why it matters**: Every PR gets a meaningful description — no developer friction required.
+
+---
+
+## Layer 5: Multi-Provider Infrastructure (New in v2.0.0)
+
+v2.0.0 transforms PRSense from a GitHub-centric tool into a truly provider-agnostic platform.
+
+### 21. GitLab Webhook Processing
+*   **What it does**: Receives GitLab `Merge Request Hook` events at `/api/webhook/gitlab`, verifies via `X-Gitlab-Token`, runs the full duplicate detection pipeline, and dispatches Slack/Discord alerts.
+*   **Why it matters**: GitLab teams get the same real-time duplicate detection that GitHub teams have enjoyed since v1.0.
+
+### 22. Bitbucket Webhook Processing
+*   **What it does**: Receives Bitbucket `pullrequest:created` and `pullrequest:updated` events at `/api/webhook/bitbucket`, runs detection, stores results, and dispatches alerts.
+*   **Why it matters**: Bitbucket Cloud teams can now use PRSense natively without any adapters or bridges.
+
+### 23. BYOK (Bring Your Own Key)
+*   **What it does**: Users supply their own OpenAI API keys via the dashboard, stored securely per-organization.
+*   **Why it matters**: Removes the single biggest friction point for adoption — teams control their own costs and rate limits.
+
+### 24. API Key Management
+*   **What it does**: Create, list, and revoke organization-scoped API keys (`prs_live_...` / `prs_test_...`) with secure hashing.
+*   **Why it matters**: Enables programmatic access to PRSense for CI/CD pipelines and custom integrations.
+
+### 25. Webhook Management
+*   **What it does**: CRUD endpoints for configuring Slack/Discord notification webhooks per organization, with event filtering (`detection.duplicate`, `detection.possible`, etc.).
+*   **Why it matters**: Teams get full control over what triggers alerts and where they go.
+

@@ -97,12 +97,49 @@ export class PostgresStorage implements StorageBackend {
                     )
                 `)
 
+                // Create decisions table for EDM
+                await this.pool.query(`
+                    CREATE TABLE IF NOT EXISTS architectural_decisions (
+                        id TEXT PRIMARY KEY,
+                        author TEXT NOT NULL,
+                        summary TEXT NOT NULL,
+                        full_text TEXT NOT NULL,
+                        url TEXT,
+                        confidence REAL,
+                        embedding vector(384),
+                        created_at BIGINT
+                    )
+                `)
+
+                // Create codebase chunks table for RAG
+                await this.pool.query(`
+                    CREATE TABLE IF NOT EXISTS codebase_chunks (
+                        id TEXT PRIMARY KEY,
+                        file_path TEXT NOT NULL,
+                        symbol_type TEXT NOT NULL,
+                        symbol_name TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        start_line INTEGER,
+                        end_line INTEGER,
+                        embedding vector(512),
+                        created_at BIGINT
+                    )
+                `)
+
                 // Create vector index for fast similarity search (only if pgvector is available)
                 try {
                     await this.pool.query(`
                         CREATE INDEX IF NOT EXISTS idx_text_embedding 
                         ON prs USING ivfflat (text_embedding vector_cosine_ops)
-                        WITH (lists = 100)
+                        WITH (lists = 100);
+                        
+                        CREATE INDEX IF NOT EXISTS idx_decision_embedding 
+                        ON architectural_decisions USING ivfflat (embedding vector_cosine_ops)
+                        WITH (lists = 100);
+
+                        CREATE INDEX IF NOT EXISTS idx_chunk_embedding 
+                        ON codebase_chunks USING ivfflat (embedding vector_cosine_ops)
+                        WITH (lists = 100);
                     `)
                 } catch {
                     // Index creation may fail if pgvector not available - continue without index
@@ -113,6 +150,10 @@ export class PostgresStorage implements StorageBackend {
                     ON prs(created_at DESC);
                     CREATE INDEX IF NOT EXISTS idx_check_timestamp 
                     ON check_results(timestamp DESC);
+                    CREATE INDEX IF NOT EXISTS idx_decision_created_at 
+                    ON architectural_decisions(created_at DESC);
+                    CREATE INDEX IF NOT EXISTS idx_chunk_path 
+                    ON codebase_chunks(file_path);
                 `)
 
                 return // Success
@@ -326,6 +367,138 @@ export class PostgresStorage implements StorageBackend {
                 `Failed to search embeddings: ${error instanceof Error ? error.message : String(error)}`,
                 error instanceof Error ? error : undefined
             )
+        }
+    }
+
+    async saveDecision(decision: import('../edm/comments.js').ArchitecturalDecision & { embedding?: Float32Array }): Promise<void> {
+        if (!this.pool) await this.init()
+        if (!this.pool) throw new StorageError('Failed to initialize database connection')
+
+        try {
+            const embeddingStr = decision.embedding ? `[${Array.from(decision.embedding).join(',')}]` : `[${new Array(384).fill(0).join(',')}]`
+
+            await this.pool.query(`
+                INSERT INTO architectural_decisions 
+                (id, author, summary, full_text, url, confidence, embedding, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (id) DO UPDATE SET
+                    summary = EXCLUDED.summary,
+                    full_text = EXCLUDED.full_text,
+                    url = EXCLUDED.url,
+                    confidence = EXCLUDED.confidence,
+                    embedding = EXCLUDED.embedding
+            `, [
+                decision.sourceId,
+                decision.author,
+                decision.summary,
+                decision.fullText,
+                decision.url,
+                decision.confidence,
+                embeddingStr,
+                Date.now()
+            ])
+        } catch (error) {
+            console.error('Failed to save architectural decision:', error)
+        }
+    }
+
+    async searchDecisions(embedding: Float32Array, limit: number): Promise<import('../edm/comments.js').ArchitecturalDecision[]> {
+        if (!this.pool) await this.init()
+        if (!this.pool) throw new StorageError('Failed to initialize database connection')
+
+        try {
+            const embeddingStr = `[${Array.from(embedding).join(',')}]`
+
+            const result = await this.pool.query(`
+                SELECT 
+                    id, author, summary, full_text, url, confidence,
+                    1 - (embedding <=> $1::vector) AS score
+                FROM architectural_decisions
+                ORDER BY embedding <=> $1::vector
+                LIMIT $2
+            `, [embeddingStr, limit])
+
+            return result.rows.map((row: any) => ({
+                type: 'decision',
+                sourceId: row.id,
+                author: row.author,
+                summary: row.summary,
+                fullText: row.full_text,
+                url: row.url,
+                confidence: row.confidence
+            }))
+        } catch (error) {
+            console.error('Failed to search decisions:', error)
+            return []
+        }
+    }
+
+    async saveChunk(chunk: import('../rag/astChunker.js').CodeChunk & { embedding: Float32Array }): Promise<void> {
+        if (!this.pool) await this.init()
+        if (!this.pool) throw new StorageError('Failed to initialize database connection')
+
+        try {
+            const embeddingStr = `[${Array.from(chunk.embedding).join(',')}]`
+            // Generate a deterministic ID based on file path and start line to handle updates
+            const chunkId = Buffer.from(`${chunk.filePath}:${chunk.startLine}:${chunk.name}`).toString('base64')
+
+            await this.pool.query(`
+                INSERT INTO codebase_chunks 
+                (id, file_path, symbol_type, symbol_name, content, start_line, end_line, embedding, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ON CONFLICT (id) DO UPDATE SET
+                    symbol_type = EXCLUDED.symbol_type,
+                    symbol_name = EXCLUDED.symbol_name,
+                    content = EXCLUDED.content,
+                    start_line = EXCLUDED.start_line,
+                    end_line = EXCLUDED.end_line,
+                    embedding = EXCLUDED.embedding,
+                    created_at = EXCLUDED.created_at
+            `, [
+                chunkId,
+                chunk.filePath,
+                chunk.type,
+                chunk.name,
+                chunk.content,
+                chunk.startLine,
+                chunk.endLine,
+                embeddingStr,
+                Date.now()
+            ])
+        } catch (error) {
+            console.error('Failed to save codebase chunk:', error)
+        }
+    }
+
+    async searchChunks(embedding: Float32Array, limit: number): Promise<Array<import('../rag/astChunker.js').CodeChunk & { embedding: Float32Array, score: number }>> {
+        if (!this.pool) await this.init()
+        if (!this.pool) throw new StorageError('Failed to initialize database connection')
+
+        try {
+            const embeddingStr = `[${Array.from(embedding).join(',')}]`
+
+            const result = await this.pool.query(`
+                SELECT 
+                    file_path, symbol_type, symbol_name, content, start_line, end_line,
+                    1 - (embedding <=> $1::vector) AS score
+                FROM codebase_chunks
+                ORDER BY embedding <=> $1::vector
+                LIMIT $2
+            `, [embeddingStr, limit])
+
+            return result.rows.map((row: any) => ({
+                filePath: row.file_path,
+                type: row.symbol_type,
+                name: row.symbol_name,
+                content: row.content,
+                startLine: row.start_line,
+                endLine: row.end_line,
+                embedding: new Float32Array(0), // Too expensive to return embeddings back for most searches
+                score: row.score
+            }))
+        } catch (error) {
+            console.error('Failed to search chunks:', error)
+            return []
         }
     }
 

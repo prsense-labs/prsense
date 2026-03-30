@@ -44,15 +44,18 @@ export interface PRInput {
     description: string
     files: string[]
     diff?: string
+    linesAdded?: number
+    linesRemoved?: number
+    author?: string
 }
 
 /**
  * Detection result
  */
 export type DetectionResult =
-    | { type: 'DUPLICATE'; originalPr: number; confidence: number }
-    | { type: 'POSSIBLE'; originalPr: number; confidence: number }
-    | { type: 'UNIQUE'; confidence: number }
+    | { type: 'DUPLICATE'; originalPr: number; confidence: number; violations?: import('./rules.js').RuleViolation[] }
+    | { type: 'POSSIBLE'; originalPr: number; confidence: number; violations?: import('./rules.js').RuleViolation[] }
+    | { type: 'UNIQUE'; confidence: number; violations?: import('./rules.js').RuleViolation[] }
 
 /**
  * Score breakdown showing contribution of each signal
@@ -72,9 +75,9 @@ export interface ScoreBreakdown {
  * Detailed detection result with score breakdown
  */
 export type DetailedDetectionResult =
-    | { type: 'DUPLICATE'; originalPr: number; confidence: number; breakdown: ScoreBreakdown }
-    | { type: 'POSSIBLE'; originalPr: number; confidence: number; breakdown: ScoreBreakdown }
-    | { type: 'UNIQUE'; confidence: number; breakdown?: ScoreBreakdown }
+    | { type: 'DUPLICATE'; originalPr: number; confidence: number; breakdown: ScoreBreakdown; violations?: import('./rules.js').RuleViolation[] }
+    | { type: 'POSSIBLE'; originalPr: number; confidence: number; breakdown: ScoreBreakdown; violations?: import('./rules.js').RuleViolation[] }
+    | { type: 'UNIQUE'; confidence: number; breakdown?: ScoreBreakdown; violations?: import('./rules.js').RuleViolation[] }
 
 /**
  * Options for check methods
@@ -113,6 +116,7 @@ export class PRSenseDetector {
     private storage?: StorageBackend
     private config: PRSenseConfig
     private cache?: EmbeddingCache
+    public rulesEngine?: import('./rules.js').RulesEngine
 
     private duplicateThreshold: number
     private possibleThreshold: number
@@ -413,13 +417,63 @@ export class PRSenseDetector {
         // which is a future roadmap item. For now, we optimistically proceed to Vector Search.
 
         // 3. Find candidates (simplified ANN - iterate all for now)
-        const candidates = await this.findCandidates(textEmbedding, this.maxCandidates)
+        const candidates = await this.findCandidates(textEmbedding, this.maxCandidates, diffEmbedding)
+
+        // 3.5 AI Workflow Intelligence: Evaluate Rules
+        let violations: import('./rules.js').RuleViolation[] = []
+        if (this.rulesEngine) {
+            let impactScore = 0
+            let lowestBusFactor = 100
+
+            // Compute AI metrics if needed by rules
+            const ruleDefs = this.rulesEngine.getRules()
+            const needsImpact = ruleDefs.some(r => r.condition.type === 'impact-score' || ('conditions' in r.condition && r.condition.conditions.some(c => c.type === 'impact-score')))
+            const needsBusFactor = ruleDefs.some(r => r.condition.type === 'bus-factor' || ('conditions' in r.condition && r.condition.conditions.some(c => c.type === 'bus-factor')))
+
+            if (needsImpact) {
+                // Lazy load impact score
+                const { ImpactScorer } = await import('./impactScore.js')
+                const scorer = new ImpactScorer()
+                const result = scorer.score({
+                    title: pr.title,
+                    description: pr.description || '',
+                    files: pr.files,
+                    ...(pr.diff !== undefined ? { diff: pr.diff } : {}),
+                    linesAdded: pr.linesAdded || 0,
+                    linesRemoved: pr.linesRemoved || 0,
+                    ...(pr.author !== undefined ? { author: pr.author } : {})
+                })
+                impactScore = result.score
+            }
+
+            if (needsBusFactor) {
+                // We need the KnowledgeGraph for this, which builds on top of AttributionGraph
+                const { KnowledgeGraph } = await import('./knowledgeGraph.js')
+                const kg = new KnowledgeGraph()
+                // Fast sync of edges (in a real scenario we'd query the persistent graph)
+                for (const file of pr.files) {
+                    const factor = kg.calculateBusFactor(file)
+                    if (factor < lowestBusFactor) lowestBusFactor = factor
+                }
+            }
+
+            const ruleArgs: import('./rules.js').RuleInput = {
+                files: pr.files,
+                linesAdded: pr.linesAdded || 0,
+                linesRemoved: pr.linesRemoved || 0
+            }
+            if (pr.author !== undefined) ruleArgs.author = pr.author;
+            if (needsImpact) ruleArgs.impactScore = impactScore;
+            if (needsBusFactor && lowestBusFactor !== 100) ruleArgs.lowestBusFactor = lowestBusFactor;
+
+            violations = this.rulesEngine.evaluate(ruleArgs)
+        }
 
         if (candidates.length === 0) {
             if (!options?.dryRun) {
                 await this.addToIndex(pr, textEmbedding, diffEmbedding)
             }
-            return { type: 'UNIQUE', confidence: 0 }
+            return { type: 'UNIQUE', confidence: 0, violations }
         }
 
         // 4. Score all candidates with breakdown
@@ -524,7 +578,7 @@ export class PRSenseDetector {
     // Private helpers
 
     private async addToIndex(
-        pr: PRInput,
+        pr: PRInput & { rawComments?: import('./edm/comments.js').PRComment[] },
         textEmbedding: Float32Array,
         diffEmbedding: Float32Array
     ): Promise<void> {
@@ -543,6 +597,29 @@ export class PRSenseDetector {
             files: pr.files
         } as PRMetadata & { files: string[] })
 
+        // Process Architectural Decisions from Comments
+        const decisions: import('./edm/comments.js').ArchitecturalDecision[] = []
+        if (pr.rawComments && pr.rawComments.length > 0) {
+            // Lazy-load to avoid cyclic dependencies at startup
+            const { DecisionExtractor } = await import('./edm/comments.js')
+            const extractor = new DecisionExtractor()
+            const extracted = extractor.ingestComments(pr.rawComments)
+
+            // Generate embeddings for each decision
+            for (const dec of extracted) {
+                try {
+                    const embResult = await this.pipeline.run(dec.summary, dec.fullText, '')
+                    decisions.push({
+                        ...dec,
+                        embedding: embResult.textEmbedding
+                    } as any)
+                } catch (e) {
+                    console.error('Failed to embed decision:', e)
+                    decisions.push(dec) // Push without embedding
+                }
+            }
+        }
+
         // Persist to storage if available
         if (this.storage) {
             try {
@@ -555,6 +632,13 @@ export class PRSenseDetector {
                     diffEmbedding,
                     createdAt: Date.now()
                 })
+
+                // Save decisions
+                if (this.storage.saveDecision) {
+                    for (const dec of decisions) {
+                        await this.storage.saveDecision(dec)
+                    }
+                }
             } catch (error) {
                 // Log error but don't fail the operation
                 console.error('Failed to save to storage:', error)
@@ -612,7 +696,8 @@ export class PRSenseDetector {
 
     private async findCandidates(
         queryEmbedding: Float32Array,
-        k: number
+        k: number,
+        queryDiffEmbedding?: Float32Array
     ): Promise<Array<{ prId: number; score: number }>> {
         // Use storage search if available and has efficient vector search (e.g. Postgres)
         if (this.storage) {
@@ -623,12 +708,19 @@ export class PRSenseDetector {
             }
         }
 
-        // Fallback: score all PRs (in production, use ANN index)
+        // Fallback: score all PRs using combined text + diff similarity
+        // This ensures PRs with different titles but near-identical diffs are still found
         const scores: Array<{ prId: number; score: number }> = []
 
         for (const [prId, embeddings] of this.embeddings.entries()) {
-            const score = cosine(queryEmbedding, embeddings.text)
-            scores.push({ prId, score })
+            const textScore = cosine(queryEmbedding, embeddings.text)
+            // If we have a diff embedding, combine text (60%) + diff (40%) for candidate ranking
+            if (queryDiffEmbedding) {
+                const diffScore = cosine(queryDiffEmbedding, embeddings.diff)
+                scores.push({ prId, score: textScore * 0.6 + diffScore * 0.4 })
+            } else {
+                scores.push({ prId, score: textScore })
+            }
         }
 
         // Return top-k
@@ -686,14 +778,5 @@ export class PRSenseDetector {
             const { textEmbedding, diffEmbedding, ...meta } = record
             this.metadata.set(record.prId, meta)
         }
-    }
-}
-
-/**
- * Extended PRMetadata with file information
- */
-declare module './types.js' {
-    interface PRMetadata {
-        files?: string[]
     }
 }

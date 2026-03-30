@@ -100,6 +100,38 @@ export class DiscordNotifier implements Notifier {
         await this.send({ embeds: [embed] })
     }
 
+    async notifyRuleViolation(alert: import('./types.js').RuleViolationAlert): Promise<void> {
+        let actionDescription = alert.action.type.toUpperCase()
+        if (alert.action.payload) {
+            const payloadStr = Array.isArray(alert.action.payload) ? alert.action.payload.join(', ') : alert.action.payload
+            actionDescription += ` (${payloadStr})`
+        }
+
+        const embed = {
+            title: '🚨 Workflow Rule Triggered',
+            color: 0xe74c3c, // Red
+            description: `**Reason:**\n${alert.description}\n\n**Action Taken:**\n\`${actionDescription}\``,
+            fields: [
+                {
+                    name: 'PR',
+                    value: `[#${alert.prId} — ${alert.prTitle}](${alert.prUrl || '#'})`,
+                    inline: true,
+                },
+                {
+                    name: 'Rule',
+                    value: alert.ruleId,
+                    inline: true,
+                },
+            ],
+            footer: {
+                text: '⚡ Powered by PRSense AI Workflow Intelligence',
+            },
+            timestamp: new Date().toISOString(),
+        }
+
+        await this.send({ embeds: [embed] })
+    }
+
     async sendWeeklyDigest(digest: WeeklyDigest): Promise<void> {
         const embed = {
             title: '📊 PRSense Weekly Digest',

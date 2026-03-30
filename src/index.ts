@@ -32,6 +32,7 @@ export * from './knowledgeGraph.js'
 export * from './descriptionGenerator.js'
 export * from './stalePR.js'
 export * from './notifications/index.js'
+export * from './edm/comments.js'
 // Re-export providers (excluding PRMetadata which conflicts with ./types.ts)
 export {
     type PRFiles,

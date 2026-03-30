@@ -2,16 +2,16 @@
 
 # PRSense 
 
-**The Repository Memory Infrastructure**
+**The Infrastructure for Repository Memory**
 
-> **Mission:** Transform stateless CI/CD into a stateful "Repository Brain" — giving engineering teams instant access to historical context, duplicate detection, and attribution.
+> **Mission:** Transform chaotic engineering scaling into streamlined execution. We use organizational knowledge graphs and cross-repo vector search to prevent duplicate engineering work, calculate true developer expertise, and automatically triage high-risk code changes for enterprise teams.
 
-**Not just a tool. The Long-Term Memory for your Codebase.**
+**Not just an AI coding assistant. The memory layer for your entire engineering organization.**
 
 [![GitHub stars](https://img.shields.io/github/stars/prsense-labs/prsense?style=social)](https://github.com/prsense-labs/prsense/stargazers)
 [![npm version](https://img.shields.io/npm/v/prsense?color=blue)](https://www.npmjs.com/package/prsense)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-186%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-189%20passed-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Deploy to Vercel](https://img.shields.io/badge/deploy-vercel-black?logo=vercel&logoColor=white)](docs/deployment.md)
 ---
@@ -30,13 +30,13 @@
 ## Key Features
 
 ### Core Capabilities
-- **Repository Memory** — Vector-indexes every PR, issue, and decision for long-term recall
-- **Semantic Search** — Ask "How did we fix this bug?" and get historical context
-- **Duplicate Detection** — 95% accuracy using OpenAI or local embeddings
-- **2ms Latency** — Bloom filter + ANN for sub-linear scaling
+- **Organizational Knowledge Graph** — Maps `Author -> PR -> File` relationships to dynamically calculate "Bus Factor" and "True Expertise"
+- **Cross-Repo Intelligence** — Instantly flags duplicate work across hundreds of microservices and repositories
+- **Risk Triage Engine** — Automatically scores PR impact and routes high-risk changes to the right senior engineers
+- **Repository Memory** — Vector-indexes every PR, issue, and decision for long-term semantic recall
 - **Production Storage** — SQLite (dev) or PostgreSQL + pgvector (prod)
-- **Attribution Tracking** — Preserves original authorship credit
-- **Cost-Effective** — $0-50/month depending on scale
+- **Attribution Tracking** — Preserves original authorship credit across the organization
+- **Cost-Effective** — Extremely scalable architecture using Bloom filters and ONNX local embeddings
 
 ### Advanced Features
 - **Persistent Storage** — Exports for SQLite/Postgres
@@ -51,9 +51,14 @@
 - **Knowledge Graph** — Complete historical file and author relationship mappings
 - **AI PR Descriptions** — Auto-generated descriptions based on local semantic history
 - **Stale PR Detection** — Identify inactive PRs natively
-- **Multi-Provider Support** — GitHub, GitLab, and Bitbucket out of the box 
+- **Multi-Provider Support** — GitHub, GitLab, and Bitbucket out of the box
+- **BYOK (Bring Your Own Key)** — Users supply their own OpenAI API keys
+- **Webhook Alerts** — Real-time Slack/Discord notifications for duplicates
+- **API Key Management** — Organization-scoped key creation and revocation
 
 📖 **See [Features Documentation](docs/features.md) for details.**
+
+> **v2.0.0** — The Multi-Provider Infrastructure Release. [See CHANGELOG](CHANGELOG.md) for full details.
 
 ---
 
