@@ -273,4 +273,4 @@ MIT License
 
 ---
 
-**PRSense v1.1.0** — The Repository Memory Infrastructure. Because your codebase deserves a brain.
+**PRSense v2.0.0** — The Repository Memory Infrastructure. Because your codebase deserves a brain.
