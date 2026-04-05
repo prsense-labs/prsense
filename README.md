@@ -153,7 +153,7 @@ npm run build   # Builds all packages
 
 **1. GitHub Action** (CI/CD)
 ```yaml
-- uses: prsense-labs/prsense@v1
+- uses: prsense-labs/prsense@v2.0.0
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     embedding-provider: 'onnx'
