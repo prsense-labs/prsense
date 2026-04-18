@@ -4,7 +4,7 @@
   
   <a href="https://prsense.dev">Website</a> &nbsp;・&nbsp;
   <a href="https://prsense.dev/docs">Full Documentation & Usage Guides</a> &nbsp;・&nbsp;
-  <a href="https://github.com/prsense-labs/dashboard">Cloud Dashboard</a>
+  
 
   <br/><br/>
 </div>
