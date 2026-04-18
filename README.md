@@ -3,7 +3,7 @@
   <p>The omniscient memory engine for your repositories. Stop redundant engineering execution.</p>
   
   <a href="https://prsense.dev">Website</a> &nbsp;・&nbsp;
-  <a href="https://prsense.dev/docs">Full Documentation & Usage Guides</a> &nbsp;・&nbsp;
+  <a href="https://prsense.dev/docs">Full Documentation & Usage Guides</a>
   
 
   <br/><br/>
