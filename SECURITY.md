@@ -105,7 +105,7 @@ When deploying PRSense as a GitHub Action:
    ```
 2. **Pin Actions**: Use a specific commit hash or version tag to prevent supply chain attacks.
    ```yaml
-   uses: prsense-labs/prsense@v1.0.2 # Recommended
+   uses: prsense-labs/prsense@v2.0.0 # Recommended
    ```
 3. **Secrets**: Store `OPENAI_API_KEY` in GitHub Secrets, never in plain text.
 
@@ -132,7 +132,7 @@ When using OpenAI embedder:
 
 ## Security Updates
 
-Security updates will be released as patch versions (e.g., 1.0.1, 1.0.2).
+Security updates will be released as patch versions (e.g., 1.0.1, 1.0.2, 1.1.0 , 2.0.0).
 
 Subscribe to security advisories:
 - GitHub: Watch repository for security alerts
@@ -142,6 +142,7 @@ Subscribe to security advisories:
 
 | 1.0.x   | :white_check_mark: |
 | 1.0.2   | :white_check_mark: |
+| 2.0.0   | :white_check_mark: |
 
 ...
 
