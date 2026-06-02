@@ -46,5 +46,6 @@ export {
     BitbucketProvider,
 } from './providers/index.js'
 export type { PRMetadata as ProviderPRMetadata } from './providers/index.js'
+export * from './llm/deepseek.js'
 // Note: server.ts and github-bot.ts are intentionally NOT exported from root.
 // Import them via 'prsense/server' and 'prsense/bot' sub-paths.

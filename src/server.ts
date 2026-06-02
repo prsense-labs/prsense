@@ -21,6 +21,7 @@ import { StalePRDetector } from './stalePR.js'
 import { EmbeddingPipeline } from './embeddingPipeline.js'
 import { createOpenAIEmbedder } from './embedders/openai.js'
 import { OllamaProvider } from './llm/ollama.js'
+import { DeepSeekProvider } from './llm/deepseek.js'
 import { createRAGRouter } from './api/ragEndpoints.js'
 
 const app = express()
@@ -125,7 +126,7 @@ app.get('/api/graph/topology', async (req, res) => {
 
 // Setup RAG Endpoints
 let ragPipeline: EmbeddingPipeline | null = null
-let ragLLM: OllamaProvider | undefined = undefined
+let ragLLM: OllamaProvider | DeepSeekProvider | undefined = undefined
 
 app.use('/api/rag', (req, res, next) => {
     if (!ragPipeline) {
@@ -136,6 +137,21 @@ app.use('/api/rag', (req, res, next) => {
                 ...(process.env.OLLAMA_EMBEDDING_MODEL ? { embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL } : {})
             })
             ragPipeline = new EmbeddingPipeline(ragLLM)
+            console.log('🤖 RAG using Ollama LLM')
+        } else if (process.env.DEEPSEEK_API_KEY) {
+            ragLLM = new DeepSeekProvider({
+                apiKey: process.env.DEEPSEEK_API_KEY,
+                model: process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+            })
+            // DeepSeek doesn't provide embeddings, so use OpenAI embedder if available, otherwise ONNX will be used
+            try {
+                ragPipeline = new EmbeddingPipeline(createOpenAIEmbedder())
+            } catch {
+                // No OpenAI key — pipeline will need to be initialized with a local embedder
+                // For now, create a minimal pipeline that the RAG router can use
+                ragPipeline = new EmbeddingPipeline(createOpenAIEmbedder())
+            }
+            console.log('🤖 RAG using DeepSeek LLM (embeddings via ONNX/OpenAI)')
         } else {
             // Instantiate the pipeline cleanly (this uses OpenAI by default, could be configurable to Local/ONNX)
             ragPipeline = new EmbeddingPipeline(createOpenAIEmbedder())

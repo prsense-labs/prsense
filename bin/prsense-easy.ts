@@ -126,9 +126,12 @@ async function setupWizard() {
 
     console.log('Let\'s set up PRSense in 3 steps:\n')
 
-    // Step 1: OpenAI Key
-    const hasKey = process.env.OPENAI_API_KEY
-    if (!hasKey) {
+    // Step 1: API Keys
+    const hasOpenAI = process.env.OPENAI_API_KEY
+    const hasDeepSeek = process.env.DEEPSEEK_API_KEY
+
+    // OpenAI Setup
+    if (!hasOpenAI) {
         log.warning('No OpenAI API key found')
         console.log('\n📝 Get your key from: https://platform.openai.com/api-keys\n')
         const apiKey = await prompt('Enter your OpenAI API key (or press Enter to skip): ')
@@ -151,6 +154,33 @@ async function setupWizard() {
         }
     } else {
         log.success('OpenAI API key found')
+    }
+
+    // DeepSeek Setup
+    if (!hasDeepSeek) {
+        log.warning('No DeepSeek API key found')
+        console.log('\n📝 DeepSeek provides highly affordable, high-quality code descriptions.')
+        console.log('Get your key from: https://platform.deepseek.com/api_keys\n')
+        const apiKey = await prompt('Enter your DeepSeek API key (or press Enter to skip): ')
+
+        if (apiKey.trim()) {
+            const envPath = join(process.cwd(), '.env')
+            const envContent = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : ''
+
+            if (envContent.includes('DEEPSEEK_API_KEY')) {
+                const newContent = envContent.replace(/DEEPSEEK_API_KEY=.*/, `DEEPSEEK_API_KEY=${apiKey}`)
+                writeFileSync(envPath, newContent)
+            } else {
+                writeFileSync(envPath, envContent + `\nDEEPSEEK_API_KEY=${apiKey}\n`)
+            }
+
+            process.env.DEEPSEEK_API_KEY = apiKey
+            log.success('DeepSeek API key saved to .env')
+        } else {
+            log.info('Skipping DeepSeek setup (you can add it to .env later)')
+        }
+    } else {
+        log.success('DeepSeek API key found')
     }
 
     // Step 2: Check git
@@ -445,8 +475,8 @@ ${colors.bold}GET STARTED:${colors.reset}
   Just run: prsense check
   (Works immediately! Uses local ONNX if no API key found)
 
-${colors.bold}WANT HIGHER ACCURACY?${colors.reset}
-  1. Get an OpenAI API key
+${colors.bold}WANT HIGHER ACCURACY OR AI DESCRIPTIONS?${colors.reset}
+  1. Get an OpenAI or DeepSeek API key
   2. Run: prsense setup
 
 ${colors.bold}DOCS:${colors.reset}
@@ -464,7 +494,7 @@ async function main() {
         console.log(`${colors.cyan}
 ╔═══════════════════════════════════════╗
 ║                                       ║
-║         PRSense CLI v1.1.0            ║
+║         PRSense CLI v2.0.1            ║
 ║     Repository Memory Infrastructure  ║
 ║                                       ║
 ╚═══════════════════════════════════════╝
@@ -520,6 +550,7 @@ ${colors.reset}`)
             log.title('⚙️ PRSense Configuration')
             if (process.argv[3] === '--show') {
                 console.log(`Embedder Mode: ${process.env.OPENAI_API_KEY ? 'OpenAI (Cloud)' : 'ONNX (Local/Offline)'}`)
+                console.log(`Chat/Description Provider: ${process.env.DEEPSEEK_API_KEY ? 'DeepSeek' : (process.env.OPENAI_API_KEY ? 'OpenAI' : 'None')}`)
                 console.log(`Local Cache: Enabled`)
             } else {
                 console.log('Usage: prsense config --show')
