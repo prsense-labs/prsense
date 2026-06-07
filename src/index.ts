@@ -47,5 +47,9 @@ export {
 } from './providers/index.js'
 export type { PRMetadata as ProviderPRMetadata } from './providers/index.js'
 export * from './llm/deepseek.js'
+// Code Intelligence (v2.1.0)
+export * from './ast/parser.js'
+export * from './health/metrics.js'
+export * from './style/learner.js'
 // Note: server.ts and github-bot.ts are intentionally NOT exported from root.
 // Import them via 'prsense/server' and 'prsense/bot' sub-paths.

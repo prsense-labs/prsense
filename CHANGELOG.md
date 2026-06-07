@@ -5,6 +5,25 @@ All notable changes to PRSense will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [2.1.0] - 2026-06-06 — **"Phase 1: Code Intelligence"**
+
+> PRSense v2.1.0 marks the beginning of the Enterprise Roadmap. PRSense is evolving from a duplicate-detection engine into a full **Semantic Code Analysis Platform**. This release introduces deep codebase understanding using AST (Abstract Syntax Tree) parsing and LLM Style Profiling.
+
+###  Highlights
+- **AST Parsing Engine (`src/ast/`)**: Native TypeScript Compiler API integration to perfectly parse files without flaky native binaries.
+- **Cyclomatic Complexity Tracking**: PRSense now calculates code complexity scores for all functions.
+- **Code Health Score (`src/health/`)**: A new 0-100 metric based on duplicate blocks and code complexity.
+- **Style Learner (`src/style/`)**: Uses an LLM to actively analyze the codebase and generate a `CodebaseStyleProfile` (naming conventions, error handling, etc.) to enforce on future PRs.
+
+### [2.0.1] - 2026-05-20 — **"DeepSeek Integration"**
+
+> PRSense v2.0.1 introduces affordable, high-quality AI via DeepSeek. As RAG and AI features scale, API costs shouldn't hold engineering teams back.
+
+###  Highlights
+- **DeepSeek LLM Provider**: Added `DeepSeekProvider` implementation.
+- **Cost Efficiency**: Drop-in replacement for OpenAI with 90% cost savings for the `DescriptionGenerator` and `RAGQueryEngine`.
+- **JSON Mode Support**: Full support for DeepSeek's structured output mode for precise triage extraction.
+
 ### [2.0.0] - 2026-03-29 — **"The Multi-Provider Infrastructure Release"**
 
 > PRSense v2.0.0 is a **major release** that transforms the library into a truly provider-agnostic infrastructure layer. This release introduces first-class GitLab and Bitbucket support across the entire stack — alongside architectural enhancements like rule combinators, Cross-Repo detection, and LLM-powered description generation.

@@ -11,6 +11,12 @@
 
 PRSense is an active context engine that vector-indexes your repositories. It acts as an enforcer to stop duplicate Pull Requests, instantly surface historical decisions, and prevent architectural drift across your engineering teams.
 
+##  v2.1 Code Intelligence Engine (New!)
+PRSense is evolving into a full **Semantic Code Analysis Engine**.
+- **AST Parsing:** Automatically calculates Cyclomatic Complexity of your functions to detect technical debt.
+- **Code Health Score:** Ranks your code quality (0-100) based on complexity and duplicate logic blocks.
+- **Style Learning:** Uses an LLM to actively learn your team's specific `CodebaseStyleProfile` (naming conventions, patterns) to enforce it on future PRs!
+
 ## 📚 Documentation
 Because PRSense scales from local CLI tools up to enterprise Kubernetes deployments, **we keep our full documentation on our website.**
 

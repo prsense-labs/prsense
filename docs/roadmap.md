@@ -33,7 +33,7 @@ For **v3.0**, our vision is the **Self-Evolving Codebase Engine** — a reposito
 ### Phase 2: Refactor Engine (v2.2.0)
 *   **Safe Refactors**: Generate provably safe transformations — remove dead code, extract duplicated logic, flag outdated dependencies.
 *   **Dry-Run Mode**: Show what the engine *would* change before opening any PRs.
-*   **Auto-PRs**: Automatically open refactoring PRs on GitHub, GitLab, and Bitbucket with detailed explanations.
+*   **Auto-PRs**: Automatically open refactoring PRs on GitHub, GitLab with detailed explanations.
 
 ### Phase 3: Full Autonomy (v3.0.0)
 *   **Learning Loop**: If user merges a suggested PR → boost confidence. If user closes → learn to avoid.
