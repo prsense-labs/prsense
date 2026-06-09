@@ -15,11 +15,17 @@ import { createOpenAIEmbedder } from '../src/embedders/openai.js'
 import { createONNXEmbedder } from '../src/embedders/onnx.js'
 import { readFileSync, existsSync } from 'fs'
 
+const pkgPath = new URL('../../package.json', import.meta.url)
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+const VERSION = pkg.version
+
+
 // ─── Parse CLI flags ─────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2)
 const dryRunFlag = args.includes('--dry-run')
 const detailedFlag = args.includes('--detailed')
+const autoPrFlag = args.includes('--auto-pr')
 const limitArg = args.find(a => a.startsWith('--limit='))
 const limitVal = limitArg ? (() => {
   const parts = limitArg.split('=')
@@ -183,7 +189,7 @@ async function searchCommand(detector: PRSenseDetector, query?: string) {
 
 async function statsCommand(detector: PRSenseDetector) {
     const stats = detector.getStats()
-    console.log(`\n${c.bold}📊 PRSense v1.0.2 — Repository Memory Statistics${c.reset}\n`)
+    console.log(`\n${c.bold}📊 PRSense v${VERSION} — Repository Memory Statistics${c.reset}\n`)
     console.log(`  Total PRs indexed:     ${c.cyan}${stats.totalPRs}${c.reset}`)
     console.log(`  Duplicate pairs found: ${c.cyan}${stats.duplicatePairs}${c.reset}`)
     console.log(`  Bloom filter size:     ${c.dim}${stats.bloomFilterSize} bits${c.reset}`)
@@ -192,7 +198,7 @@ async function statsCommand(detector: PRSenseDetector) {
 
 function printHelp() {
     console.log(`
-${c.bold}${c.cyan}PRSense v1.0.2 — Repository Memory Infrastructure${c.reset}
+${c.bold}${c.cyan}PRSense v${VERSION} — Repository Memory Infrastructure${c.reset}
 
 ${c.bold}USAGE:${c.reset}
   prsense <command> [options]
@@ -200,12 +206,15 @@ ${c.bold}USAGE:${c.reset}
 ${c.bold}COMMANDS:${c.reset}
   ${c.green}check${c.reset} <file.json>   Check if a PR is a duplicate
   ${c.green}search${c.reset} "query"      Semantic search over indexed PRs
+  ${c.green}refactor${c.reset} f1 f2      Generate unified refactor for duplicates
   ${c.green}stats${c.reset}               Show memory statistics
   ${c.green}help${c.reset}                Show this help
+
 
 ${c.bold}OPTIONS:${c.reset}
   --dry-run           Use mock embedder (no API calls, for CI/testing)
   --detailed          Show full score breakdown (text / diff / file weights)
+  --auto-pr           Automatically create a Pull Request with generated refactor
   --limit=N           Max results for search (default: 10)
 
 ${c.bold}EMBEDDER SELECTION:${c.reset}
@@ -246,8 +255,9 @@ async function main() {
 
     const embedder = createEmbedder()
     const detector = new PRSenseDetector({ embedder })
-    // v1.0.2: must await init() to load persisted state from storage
+    // Must await init() to load persisted state from storage
     await detector.init()
+
 
     switch (command) {
         case 'check':
@@ -258,6 +268,10 @@ async function main() {
             break
         case 'stats':
             await statsCommand(detector)
+            break
+        case 'refactor':
+            const { runRefactorCommand } = await import('../src/refactor/engine.js')
+            await runRefactorCommand(filteredArgs.slice(1), { dryRun: dryRunFlag, detailed: detailedFlag, autoPr: autoPrFlag })
             break
         default:
             console.error(`${c.red}Unknown command: ${command}${c.reset}`)

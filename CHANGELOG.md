@@ -5,6 +5,16 @@ All notable changes to PRSense will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [2.2.0] - 2026-06-09 — **"Phase 2: Refactor Engine"**
+
+> The second phase of the PRSense Enterprise Roadmap. PRSense can now actively resolve the duplicates and technical debt it detects by writing unified refactored utility functions via LLM and automatically opening Pull Requests using the GitHub CLI.
+
+### Highlights
+- **Agentic Refactoring (`src/refactor/engine.ts`)**: Generates unified utilities from duplicated codebase files.
+- **Auto-PR Agent (`src/refactor/auto-pr.ts`)**: Automatically creates branches, commits LLM-generated code, and opens PRs with detailed descriptions using the `gh` CLI.
+- **Dynamic CLI Versioning**: The CLI now dynamically pulls its version directly from `package.json`.
+- **New CLI Command**: `prsense refactor <file1> <file2> [--dry-run] [--auto-pr]` added.
+
 ### [2.1.0] - 2026-06-06 — **"Phase 1: Code Intelligence"**
 
 > PRSense v2.1.0 marks the beginning of the Enterprise Roadmap. PRSense is evolving from a duplicate-detection engine into a full **Semantic Code Analysis Platform**. This release introduces deep codebase understanding using AST (Abstract Syntax Tree) parsing and LLM Style Profiling.

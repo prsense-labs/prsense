@@ -17,6 +17,11 @@ import { join } from 'path'
 import * as readline from 'readline'
 import dotenv from 'dotenv'
 
+const pkgPath = new URL('../../package.json', import.meta.url)
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+const VERSION = pkg.version
+
+
 // Load environment variables immediately
 dotenv.config()
 
@@ -494,7 +499,7 @@ async function main() {
         console.log(`${colors.cyan}
 ╔═══════════════════════════════════════╗
 ║                                       ║
-║         PRSense CLI v2.0.1            ║
+║         PRSense CLI v${VERSION.padEnd(16, ' ')} ║
 ║     Repository Memory Infrastructure  ║
 ║                                       ║
 ╚═══════════════════════════════════════╝

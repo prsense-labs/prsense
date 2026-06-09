@@ -1,6 +1,6 @@
 {
   "name": "prsense",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "The Repository Memory Infrastructure",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
